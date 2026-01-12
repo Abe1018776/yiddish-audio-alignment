@@ -47,6 +47,11 @@ The cleaner removes:
    ```bash
    python app.py
    ```
+   
+   For development with debug mode enabled:
+   ```bash
+   FLASK_DEBUG=true python app.py
+   ```
 
 4. **Open your browser**
    Navigate to `http://localhost:5000`
@@ -178,11 +183,15 @@ For production deployment, set:
 - `FLASK_ENV=production`
 - `SECRET_KEY=your-secret-key`
 
+For development with debug mode:
+- `FLASK_DEBUG=true` (enables Flask debug mode, **never use in production**)
+
 ## Security Notes
 
 - The application does not store uploaded files permanently
 - Files are deleted immediately after processing
 - Google Drive credentials are stored locally and not shared
+- Debug mode is disabled by default for security
 - For production use, ensure proper authentication and HTTPS
 
 ## Contributing
