@@ -92,7 +92,12 @@ class DriveDownloader:
             self.authenticate()
         
         # Query for documents in folder
-        query = f"'{folder_id}' in parents and (mimeType='application/vnd.google-apps.document' or mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document' or mimeType='application/msword')"
+        mime_types = [
+            "mimeType='application/vnd.google-apps.document'",
+            "mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document'",
+            "mimeType='application/msword'"
+        ]
+        query = f"'{folder_id}' in parents and ({' or '.join(mime_types)})"
         
         results = self.service.files().list(
             q=query,

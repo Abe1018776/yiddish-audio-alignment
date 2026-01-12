@@ -128,10 +128,7 @@ def download_cleaned():
         filename = data.get('filename', 'cleaned_document.docx')
         
         # Ensure filename ends with .docx
-        if not filename.endswith('.docx'):
-            filename = filename.rsplit('.', 1)[0] + '_cleaned.docx'
-        else:
-            filename = filename.rsplit('.', 1)[0] + '_cleaned.docx'
+        filename = filename.rsplit('.', 1)[0] + '_cleaned.docx'
         
         # Save cleaned document
         output_path = os.path.join(app.config['TEMP_FOLDER'], filename)

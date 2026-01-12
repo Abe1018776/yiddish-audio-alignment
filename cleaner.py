@@ -113,6 +113,12 @@ class TranscriptCleaner:
         original_words = len(original_text.split())
         cleaned_words = len(cleaned_text.split())
         
+        # Calculate reduction percentage
+        if len(original_text) > 0:
+            reduction_percentage = round((1 - len(cleaned_text) / len(original_text)) * 100, 2)
+        else:
+            reduction_percentage = 0.0
+        
         return {
             'original_chars': len(original_text),
             'cleaned_chars': len(cleaned_text),
@@ -123,5 +129,5 @@ class TranscriptCleaner:
             'original_words': original_words,
             'cleaned_words': cleaned_words,
             'removed_words': original_words - cleaned_words,
-            'reduction_percentage': round((1 - len(cleaned_text) / len(original_text)) * 100, 2) if len(original_text) > 0 else 0
+            'reduction_percentage': reduction_percentage
         }

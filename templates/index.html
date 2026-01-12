@@ -522,8 +522,11 @@
         function displayResults(results) {
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = '';
+            
+            // Store cleaned texts for download functionality
+            window.cleanedTexts = {};
 
-            results.forEach(result => {
+            results.forEach((result, index) => {
                 if (!result.success) {
                     resultsDiv.innerHTML += `
                         <div class="error show">
@@ -532,13 +535,16 @@
                     `;
                     return;
                 }
+                
+                // Store cleaned text for download
+                window.cleanedTexts[index] = result.cleaned_text;
 
                 const stats = result.statistics;
                 const resultHtml = `
                     <div class="result-item">
                         <div class="result-header">
-                            <h3>${result.filename}</h3>
-                            <button class="btn btn-secondary" onclick="downloadCleaned('${result.filename}', '${escapeHtml(result.cleaned_text)}')">
+                            <h3>${escapeHtml(result.filename)}</h3>
+                            <button class="btn btn-secondary download-btn" data-filename="${escapeHtml(result.filename)}" data-text-index="${index}">
                                 ⬇️ Download Cleaned
                             </button>
                         </div>
@@ -595,6 +601,16 @@
             });
 
             resultsDiv.classList.add('show');
+            
+            // Add event listeners for download buttons
+            document.querySelectorAll('.download-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const filename = this.getAttribute('data-filename');
+                    const textIndex = this.getAttribute('data-text-index');
+                    const cleanedText = window.cleanedTexts[textIndex];
+                    downloadCleaned(filename, cleanedText);
+                });
+            });
         }
 
         async function downloadCleaned(filename, cleanedText) {
@@ -606,7 +622,7 @@
                     },
                     body: JSON.stringify({
                         filename: filename,
-                        cleaned_text: unescapeHtml(cleanedText)
+                        cleaned_text: cleanedText
                     })
                 });
 
