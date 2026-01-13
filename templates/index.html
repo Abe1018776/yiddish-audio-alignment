@@ -948,7 +948,14 @@
         // Copy to clipboard function
         async function copyToClipboard(index, type, button) {
             try {
+                // Validate that the text exists
                 const text = type === 'cleaned' ? window.cleanedTexts[index] : window.originalTexts[index];
+                if (!text) {
+                    console.error('Text not found for index:', index, 'type:', type);
+                    showError('Text not available for copying');
+                    return;
+                }
+                
                 await navigator.clipboard.writeText(text);
                 
                 // Update button to show success
@@ -969,10 +976,27 @@
         // Copy removed item to clipboard
         async function copyRemovedItem(resultIndex, itemIndex, button) {
             try {
-                // Get the removed item examples from the DOM
+                // Validate DOM elements exist
                 const itemElement = button.closest('.removed-item');
+                if (!itemElement) {
+                    console.error('Could not find removed item element');
+                    showError('Could not find content to copy');
+                    return;
+                }
+                
                 const examplesElement = itemElement.querySelector('.removed-item-examples');
+                if (!examplesElement) {
+                    console.error('Could not find examples element');
+                    showError('Could not find content to copy');
+                    return;
+                }
+                
                 const text = examplesElement.textContent.trim();
+                if (!text) {
+                    console.error('No text content found');
+                    showError('No content to copy');
+                    return;
+                }
                 
                 await navigator.clipboard.writeText(text);
                 
