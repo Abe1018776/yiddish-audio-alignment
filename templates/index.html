@@ -4,441 +4,143 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yiddish Transcript Cleaner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 40px;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #e0e0e0;
-        }
-
-        .tab {
-            padding: 12px 24px;
-            background: none;
-            border: none;
-            border-bottom: 3px solid transparent;
-            cursor: pointer;
-            font-size: 16px;
-            color: #666;
-            transition: all 0.3s;
-        }
-
-        .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-            font-weight: 600;
-        }
-
-        .tab:hover {
-            color: #667eea;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 20px;
-        }
-
-        .upload-area:hover {
-            background: #f8f9ff;
-            border-color: #764ba2;
-        }
-
-        .upload-area.dragover {
-            background: #f0f4ff;
-            border-color: #764ba2;
-        }
-
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .input-group select,
-        .input-group input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-            background: white;
-        }
-
-        .input-group select:focus,
-        .input-group input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .input-group select {
-            cursor: pointer;
-        }
-        
-        .profile-info {
-            font-size: 14px;
-            color: #666;
-            margin-top: 5px;
-            font-style: italic;
-        }
-
-        .btn {
-            padding: 12px 32px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-            margin-left: 10px;
-        }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-
-        .results {
-            display: none;
-            margin-top: 30px;
-        }
-
-        .results.show {
-            display: block;
-        }
-
-        .result-item {
-            margin-bottom: 30px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .result-header {
-            background: #f8f9fa;
-            padding: 15px 20px;
-            border-bottom: 1px solid #e0e0e0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .result-header h3 {
-            color: #333;
-            font-size: 18px;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            padding: 20px;
-            background: #f8f9ff;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #667eea;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .text-sections {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            padding: 20px;
-        }
-
-        .text-section {
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .text-section-header {
-            background: #f8f9fa;
-            padding: 10px 15px;
-            font-weight: 600;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .text-content {
-            padding: 15px;
-            max-height: 300px;
-            overflow-y: auto;
-            font-size: 14px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .removed-items {
-            padding: 20px;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .removed-items h4 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .removed-item {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-        }
-
-        .removed-item-title {
-            font-weight: 600;
-            color: #856404;
-            margin-bottom: 5px;
-        }
-
-        .removed-item-examples {
-            font-size: 13px;
-            color: #666;
-            margin-top: 5px;
-            max-height: 100px;
-            overflow-y: auto;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 40px;
-        }
-
-        .loading.show {
-            display: block;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .error {
-            background: #fee;
-            border-left: 4px solid #f44336;
-            padding: 15px;
-            border-radius: 4px;
-            color: #c62828;
-            margin-top: 20px;
-            display: none;
+        .spinner {
+            animation: spin 1s linear infinite;
         }
-
-        .error.show {
-            display: block;
-        }
-
-        .success {
-            background: #e8f5e9;
-            border-left: 4px solid #4caf50;
-            padding: 15px;
-            border-radius: 4px;
-            color: #2e7d32;
-            margin-top: 20px;
-        }
-        
-        .profile-badge {
+        .icon {
             display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-left: 10px;
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.125em;
         }
-
-        @media (max-width: 768px) {
-            .text-sections {
-                grid-template-columns: 1fr;
-            }
-
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .header h1 {
-                font-size: 2em;
-            }
+        .icon svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+        }
+        @keyframes copied-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .copied-animation {
+            animation: copied-pulse 0.3s ease-out;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔤 Yiddish Transcript Cleaner</h1>
-            <p>Remove titles, headings, and notes from your transcripts</p>
-        </div>
+<body class="bg-blue-600 min-h-screen p-5 font-sans">
+    <!-- SVG Icon Definitions -->
+    <svg style="display: none;" xmlns="http://www.w3.org/2000/svg">
+        <symbol id="icon-language" viewBox="0 0 640 512">
+            <path d="M0 128C0 92.7 28.7 64 64 64H256h48 16H576c35.3 0 64 28.7 64 64V384c0 35.3-28.7 64-64 64H320 304 256 64c-35.3 0-64-28.7-64-64V128zm320 0V384H576V128H320zM178.3 175.9c-3.2-7.2-10.4-11.9-18.3-11.9s-15.1 4.7-18.3 11.9l-64 144c-4.5 10.1 .1 21.9 10.2 26.4s21.9-.1 26.4-10.2l8.9-20.1h73.6l8.9 20.1c4.5 10.1 16.3 14.6 26.4 10.2s14.6-16.3 10.2-26.4l-64-144zM160 233.2L179 276H141l19-42.8zM448 164c11 0 20 9 20 20v4h44 16c11 0 20 9 20 20s-9 20-20 20h-2l-1.6 4.5c-8.9 24.4-22.4 46.6-39.6 65.4c.9 .6 1.8 1.1 2.7 1.6l18.9 11.3c9.5 5.7 12.5 18 6.9 27.4s-18 12.5-27.4 6.9l-18.9-11.3c-4.5-2.7-8.8-5.5-13.1-8.5c-10.6 7.5-21.9 14-34 19.4l-3.6 1.6c-10.1 4.5-21.9-.1-26.4-10.2s.1-21.9 10.2-26.4l3.6-1.6c6.4-2.9 12.6-6.1 18.5-9.8l-12.2-12.2c-7.8-7.8-7.8-20.5 0-28.3s20.5-7.8 28.3 0l14.6 14.6 .5 .5c12.4-13.1 22.5-28.3 29.8-45H448 376c-11 0-20-9-20-20s9-20 20-20h52v-4c0-11 9-20 20-20z"/>
+        </symbol>
+        <symbol id="icon-upload" viewBox="0 0 384 512">
+            <path d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"/>
+        </symbol>
+        <symbol id="icon-drive" viewBox="0 0 512 512">
+            <path d="M339 314.9L175.4 32h161.2l163.6 282.9H339zm-137.5 23.6L120.9 480h310.5L512 338.5H201.5zM154.1 67.4L0 338.5 80.6 480 237 208.8 154.1 67.4z"/>
+        </symbol>
+        <symbol id="icon-sliders" viewBox="0 0 512 512">
+            <path d="M0 416c0 17.7 14.3 32 32 32l54.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 448c17.7 0 32-14.3 32-32s-14.3-32-32-32l-246.7 0c-12.3-28.3-40.5-48-73.3-48s-61 19.7-73.3 48L32 384c-17.7 0-32 14.3-32 32zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM320 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm32-80c-32.8 0-61 19.7-73.3 48L32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l246.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48l54.7 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-54.7 0c-12.3-28.3-40.5-48-73.3-48zM192 128a32 32 0 1 1 0-64 32 32 0 1 1 0 64zm73.3-64C253 35.7 224.8 16 192 16s-61 19.7-73.3 48L32 64C14.3 64 0 78.3 0 96s14.3 32 32 32l86.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 128c17.7 0 32-14.3 32-32s-14.3-32-32-32L265.3 64z"/>
+        </symbol>
+        <symbol id="icon-cloud-upload" viewBox="0 0 640 512">
+            <path d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-217c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l39-39V392c0 13.3 10.7 24 24 24s24-10.7 24-24V257.9l39 39c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-80-80c-9.4-9.4-24.6-9.4-33.9 0l-80 80z"/>
+        </symbol>
+        <symbol id="icon-copy" viewBox="0 0 448 512">
+            <path d="M208 0H332.1c12.7 0 24.9 5.1 33.9 14.1l67.9 67.9c9 9 14.1 21.2 14.1 33.9V336c0 26.5-21.5 48-48 48H208c-26.5 0-48-21.5-48-48V48c0-26.5 21.5-48 48-48zM48 128h80v64H64V448H256V416h64v48c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V176c0-26.5 21.5-48 48-48z"/>
+        </symbol>
+        <symbol id="icon-download" viewBox="0 0 512 512">
+            <path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/>
+        </symbol>
+        <symbol id="icon-trash" viewBox="0 0 448 512">
+            <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/>
+        </symbol>
+        <symbol id="icon-check" viewBox="0 0 448 512">
+            <path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/>
+        </symbol>
+    </svg>
+    
+    <div class="max-w-5xl mx-auto">
+        <header class="text-center text-white mb-10">
+            <h1 class="text-4xl font-bold mb-2 flex items-center justify-center gap-3">
+                <span class="icon text-3xl"><svg><use href="#icon-language"/></svg></span>
+                Yiddish Transcript Cleaner
+            </h1>
+            <p class="text-lg opacity-90">Remove titles, headings, and notes from your transcripts</p>
+        </header>
 
-        <div class="card">
-            <div class="tabs">
-                <button class="tab active" data-tab="upload">📄 Upload File</button>
-                <button class="tab" data-tab="drive">📁 Google Drive</button>
+        <div class="bg-white rounded-xl p-8 shadow-3xl mb-5">
+            <div class="flex gap-2 mb-8 border-b-2 border-gray-200">
+                <button class="tab px-6 py-3 border-b-3 border-transparent text-gray-500 font-medium flex items-center gap-2 transition-all hover:text-blue-600 active border-b-blue-600 text-blue-600 font-semibold" data-tab="upload">
+                    <span class="icon"><svg><use href="#icon-upload"/></svg></span> Upload File
+                </button>
+                <button class="tab px-6 py-3 border-b-3 border-transparent text-gray-500 font-medium flex items-center gap-2 transition-all hover:text-blue-600" data-tab="drive">
+                    <span class="icon"><svg><use href="#icon-drive"/></svg></span> Google Drive
+                </button>
             </div>
 
-            <div id="upload-tab" class="tab-content active">
-                <div class="input-group">
-                    <label for="profileSelectUpload">🎯 Cleaning Profile</label>
-                    <select id="profileSelectUpload" class="profile-select">
-                        <!-- Options will be populated dynamically from the API -->
-                    </select>
-                    <div class="profile-info" id="profileInfoUpload" aria-live="polite">Loading profile descriptions...</div>
+            <div id="upload-tab" class="tab-content">
+                <div class="mb-5">
+                    <label for="profileSelectUpload" class="block mb-2 font-semibold text-gray-800 flex items-center gap-2">
+                        <span class="icon"><svg><use href="#icon-sliders"/></svg></span> Cleaning Profile
+                    </label>
+                    <select id="profileSelectUpload" class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors focus:outline-none focus:border-blue-600 cursor-pointer"></select>
+                    <div class="text-sm text-gray-500 mt-1 italic" id="profileInfoUpload" aria-live="polite">Loading profile descriptions...</div>
                 </div>
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📁</div>
-                    <h3>Drop your Word document here</h3>
-                    <p>or click to browse</p>
-                    <input type="file" id="fileInput" accept=".doc,.docx" style="display: none;">
+                <div id="uploadArea" class="border-3 border-dashed border-blue-600 rounded-lg p-10 text-center cursor-pointer transition-all hover:bg-blue-50 mb-5">
+                    <div class="text-5xl text-blue-600 mb-3">
+                        <span class="icon"><svg><use href="#icon-cloud-upload"/></svg></span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-1">Drop your Word document here</h3>
+                    <p class="text-gray-500">or click to browse</p>
+                    <input type="file" id="fileInput" accept=".doc,.docx" class="hidden">
                 </div>
-                <button class="btn btn-primary" id="processBtn" disabled>Process Document</button>
+                <button class="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold transition-all hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" id="processBtn" disabled>
+                    Process Document
+                </button>
             </div>
 
-            <div id="drive-tab" class="tab-content">
-                <div class="input-group">
-                    <label for="profileSelectDrive">🎯 Cleaning Profile</label>
-                    <select id="profileSelectDrive" class="profile-select">
-                        <!-- Options will be populated dynamically from the API -->
-                    </select>
-                    <div class="profile-info" id="profileInfoDrive" aria-live="polite">Loading profile descriptions...</div>
+            <div id="drive-tab" class="tab-content hidden">
+                <div class="mb-5">
+                    <label for="profileSelectDrive" class="block mb-2 font-semibold text-gray-800 flex items-center gap-2">
+                        <span class="icon"><svg><use href="#icon-sliders"/></svg></span> Cleaning Profile
+                    </label>
+                    <select id="profileSelectDrive" class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors focus:outline-none focus:border-blue-600 cursor-pointer"></select>
+                    <div class="text-sm text-gray-500 mt-1 italic" id="profileInfoDrive" aria-live="polite">Loading profile descriptions...</div>
                 </div>
-                <div class="input-group">
-                    <label for="driveUrl">Google Drive File or Folder URL</label>
-                    <input type="text" id="driveUrl" placeholder="https://drive.google.com/file/d/... or https://drive.google.com/drive/folders/..." />
+                <div class="mb-5">
+                    <label for="driveUrl" class="block mb-2 font-semibold text-gray-800">Google Drive Folder URL</label>
+                    <input type="text" id="driveUrl" placeholder="https://drive.google.com/drive/folders/..." class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors focus:outline-none focus:border-blue-600">
                 </div>
-                <button class="btn btn-primary" id="processDriveBtn">Process Drive Link</button>
-                <p style="margin-top: 15px; color: #666; font-size: 14px;">
-                    <strong>Note:</strong> Paste a link to a single file or an entire folder (including subfolders). Google Drive integration requires additional setup - see README for instructions.
+                <button class="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold transition-all hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-lg" id="processDriveBtn">
+                    Process Drive Folder
+                </button>
+                <p class="mt-4 text-gray-500 text-sm">
+                    <strong>Note:</strong> Google Drive integration requires additional setup. See README for instructions.
                 </p>
             </div>
 
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Processing your documents...</p>
+            <div class="hidden text-center py-10" id="loading">
+                <div class="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full spinner mx-auto mb-5"></div>
+                <p class="text-gray-600">Processing your documents...</p>
             </div>
 
-            <div class="error" id="error"></div>
+            <div class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded text-red-700 mt-5" id="error"></div>
 
-            <div class="results" id="results"></div>
+            <div class="hidden mt-8" id="results"></div>
         </div>
     </div>
 
     <script>
-        // Store profile descriptions
         let profileDescriptions = {};
         let profileOptions = [];
 
-        // Load profiles on page load
         async function loadProfiles() {
             try {
                 const response = await fetch('/profiles');
@@ -447,7 +149,6 @@
                 }
                 profileDescriptions = await response.json();
                 
-                // Build profile options array (sorted for consistency)
                 const profileKeys = Object.keys(profileDescriptions).sort();
                 profileOptions = profileKeys.map(key => ({
                     value: key,
@@ -455,14 +156,10 @@
                     description: profileDescriptions[key]
                 }));
                 
-                // Populate dropdown menus
                 populateDropdowns();
-                
-                // Update initial description
                 updateProfileInfo();
             } catch (error) {
                 console.error('Failed to load profiles from API:', error.message || error);
-                // Provide fallback message to user
                 const uploadInfo = document.getElementById('profileInfoUpload');
                 const driveInfo = document.getElementById('profileInfoDrive');
                 if (uploadInfo) uploadInfo.textContent = 'Unable to load profiles. Please refresh the page.';
@@ -470,25 +167,18 @@
             }
         }
         
-        // Populate both dropdown menus with profiles from API
         function populateDropdowns() {
             const uploadSelect = document.getElementById('profileSelectUpload');
             const driveSelect = document.getElementById('profileSelectDrive');
-            
-            // Default profile to select (most comprehensive)
             const defaultProfile = 'titles_and_parentheses';
             
             [uploadSelect, driveSelect].forEach(select => {
                 if (select) {
-                    // Clear existing options
                     select.innerHTML = '';
-                    
-                    // Add profile options
                     profileOptions.forEach(profile => {
                         const option = document.createElement('option');
                         option.value = profile.value;
                         option.textContent = profile.label;
-                        // Select the default profile
                         if (profile.value === defaultProfile) {
                             option.selected = true;
                         }
@@ -498,21 +188,14 @@
             });
         }
         
-        // Format profile key to display name
-        function formatProfileName(key) {
-            return key.split('_').map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1)
-            ).join(' ');
+        function formatProfileName(name) {
+            return name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         }
         
-        // Get profile display name from key
-        function getProfileDisplayName(profileKey) {
-            if (!profileKey) return 'Unknown';
-            const option = profileOptions.find(opt => opt.value === profileKey);
-            return option ? option.label : formatProfileName(profileKey);
+        function getProfileDisplayName(name) {
+            return formatProfileName(name);
         }
-
-        // Update profile info text when selection changes
+        
         function updateProfileInfo() {
             const uploadSelect = document.getElementById('profileSelectUpload');
             const driveSelect = document.getElementById('profileSelectDrive');
@@ -520,152 +203,127 @@
             const driveInfo = document.getElementById('profileInfoDrive');
             
             if (uploadSelect && uploadInfo) {
-                const selectedProfile = uploadSelect.value;
-                uploadInfo.textContent = profileDescriptions[selectedProfile] || '';
+                const profile = profileOptions.find(p => p.value === uploadSelect.value);
+                uploadInfo.textContent = profile ? profile.description : '';
             }
             
             if (driveSelect && driveInfo) {
-                const selectedProfile = driveSelect.value;
-                driveInfo.textContent = profileDescriptions[selectedProfile] || '';
+                const profile = profileOptions.find(p => p.value === driveSelect.value);
+                driveInfo.textContent = profile ? profile.description : '';
             }
         }
 
-        // Add event listeners for profile selection changes
-        document.addEventListener('DOMContentLoaded', () => {
-            // Load profiles first
-            loadProfiles().then(() => {
-                // Then attach event listeners after profiles are loaded
-                const uploadSelect = document.getElementById('profileSelectUpload');
-                const driveSelect = document.getElementById('profileSelectDrive');
-                
-                if (uploadSelect) {
-                    uploadSelect.addEventListener('change', updateProfileInfo);
-                }
-                if (driveSelect) {
-                    driveSelect.addEventListener('change', updateProfileInfo);
-                }
-            });
-        });
+        document.getElementById('profileSelectUpload')?.addEventListener('change', updateProfileInfo);
+        document.getElementById('profileSelectDrive')?.addEventListener('change', updateProfileInfo);
+
+        loadProfiles();
 
         // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.tab').forEach(t => {
+                    t.classList.remove('active', 'border-b-blue-600', 'text-blue-600', 'font-semibold');
+                    t.classList.add('text-gray-500');
+                });
+                tab.classList.add('active', 'border-b-blue-600', 'text-blue-600', 'font-semibold');
+                tab.classList.remove('text-gray-500');
                 
-                tab.classList.add('active');
-                const tabId = tab.getAttribute('data-tab') + '-tab';
-                document.getElementById(tabId).classList.add('active');
-                
-                // Clear results and errors
-                document.getElementById('results').classList.remove('show');
-                document.getElementById('error').classList.remove('show');
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById(tab.dataset.tab + '-tab').classList.remove('hidden');
             });
         });
 
-        // File upload handling
+        // File upload
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const processBtn = document.getElementById('processBtn');
-        let selectedFile = null;
+        let selectedFiles = [];
 
         uploadArea.addEventListener('click', () => fileInput.click());
-
+        
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadArea.classList.add('dragover');
+            uploadArea.classList.add('bg-blue-100', 'border-blue-700');
         });
-
+        
         uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
+            uploadArea.classList.remove('bg-blue-100', 'border-blue-700');
         });
-
+        
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFileSelect(files[0]);
-            }
+            uploadArea.classList.remove('bg-blue-100', 'border-blue-700');
+            handleFiles(e.dataTransfer.files);
         });
 
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleFileSelect(e.target.files[0]);
-            }
+            handleFiles(e.target.files);
         });
 
-        function handleFileSelect(file) {
-            if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-                selectedFile = file;
-                uploadArea.querySelector('h3').textContent = file.name;
-                uploadArea.querySelector('p').textContent = 'Click to choose another file';
+        function handleFiles(files) {
+            selectedFiles = Array.from(files).filter(f => 
+                f.name.endsWith('.doc') || f.name.endsWith('.docx')
+            );
+            if (selectedFiles.length > 0) {
+                uploadArea.querySelector('h3').textContent = 
+                    `${selectedFiles.length} file(s) selected`;
                 processBtn.disabled = false;
-            } else {
-                showError('Please select a Word document (.doc or .docx)');
             }
         }
 
-        // Process single file
         processBtn.addEventListener('click', async () => {
-            if (!selectedFile) return;
-
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('profile', document.getElementById('profileSelectUpload').value);
-
-            showLoading(true);
+            if (selectedFiles.length === 0) return;
+            
             hideError();
-
+            showLoading(true);
+            
             try {
+                const formData = new FormData();
+                formData.append('file', selectedFiles[0]);
+                
+                const profileSelect = document.getElementById('profileSelectUpload');
+                formData.append('profile', profileSelect.value);
+
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
                 });
 
-                const data = await response.json();
-
-                if (data.success) {
-                    displayResults([data]);
-                } else {
-                    showError(data.error || 'An error occurred');
-                }
+                const results = await response.json();
+                displayResults(results);
             } catch (error) {
-                showError('Failed to process document: ' + error.message);
+                showError('Failed to process files: ' + error.message);
             } finally {
                 showLoading(false);
             }
         });
 
-        // Process Drive folder or file
+        // Drive processing
         document.getElementById('processDriveBtn').addEventListener('click', async () => {
-            const driveUrl = document.getElementById('driveUrl').value.trim();
-            const profile = document.getElementById('profileSelectDrive').value;
-
+            const driveUrl = document.getElementById('driveUrl').value;
             if (!driveUrl) {
                 showError('Please enter a Google Drive file or folder URL');
                 return;
             }
 
-            showLoading(true);
             hideError();
+            showLoading(true);
 
             try {
+                const profileSelect = document.getElementById('profileSelectDrive');
                 const response = await fetch('/process-drive', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ drive_url: driveUrl, profile: profile })
+                    body: JSON.stringify({ 
+                        folder_url: driveUrl,
+                        profile: profileSelect.value
+                    })
                 });
 
-                const data = await response.json();
-
-                if (data.success) {
-                    displayResults(data.results);
-                } else {
-                    showError(data.error || 'An error occurred');
-                }
+                const results = await response.json();
+                displayResults(results);
             } catch (error) {
                 showError('Failed to process Drive folder: ' + error.message);
             } finally {
@@ -677,82 +335,100 @@
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = '';
             
-            // Store cleaned texts for download functionality
             window.cleanedTexts = {};
+            window.originalTexts = {};
+            window.removedItems = {};
+
+            // Normalize to array if single result
+            if (!Array.isArray(results)) {
+                results = [results];
+            }
 
             results.forEach((result, index) => {
                 if (!result.success) {
                     resultsDiv.innerHTML += `
-                        <div class="error show">
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded text-red-700 mb-4">
                             <strong>Error processing ${result.filename}:</strong> ${result.error}
                         </div>
                     `;
                     return;
                 }
                 
-                // Store cleaned text for download
                 window.cleanedTexts[index] = result.cleaned_text;
+                window.originalTexts[index] = result.original_text;
+                window.removedItems[index] = result.removed_items;
 
                 const stats = result.statistics;
                 const profileName = result.profile || 'unknown';
                 const profileDisplay = getProfileDisplayName(profileName);
                 
                 const resultHtml = `
-                    <div class="result-item">
-                        <div class="result-header">
-                            <h3>
+                    <div class="border border-gray-200 rounded-lg overflow-hidden mb-6">
+                        <div class="bg-gray-50 px-5 py-4 border-b border-gray-200 flex justify-between items-center flex-wrap gap-3">
+                            <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2 flex-wrap">
                                 ${escapeHtml(result.filename)}
-                                <span class="profile-badge">${profileDisplay}</span>
+                                <span class="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">${profileDisplay}</span>
                             </h3>
-                            <button class="btn btn-secondary download-btn" data-filename="${escapeHtml(result.filename)}" data-text-index="${index}">
-                                ⬇️ Download Cleaned
+                            <button class="download-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium transition-all hover:bg-gray-200 flex items-center gap-2" data-filename="${escapeHtml(result.filename)}" data-text-index="${index}">
+                                <span class="icon"><svg><use href="#icon-download"/></svg></span> Download Cleaned
                             </button>
                         </div>
                         
-                        <div class="stats">
-                            <div class="stat-item">
-                                <div class="stat-value">${stats.reduction_percentage}%</div>
-                                <div class="stat-label">Reduced</div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 bg-blue-50">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">${stats.reduction_percentage}%</div>
+                                <div class="text-xs text-gray-500 mt-1">Reduced</div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-value">${stats.removed_words}</div>
-                                <div class="stat-label">Words Removed</div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">${stats.removed_words}</div>
+                                <div class="text-xs text-gray-500 mt-1">Words Removed</div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-value">${stats.removed_lines}</div>
-                                <div class="stat-label">Lines Removed</div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">${stats.removed_lines}</div>
+                                <div class="text-xs text-gray-500 mt-1">Lines Removed</div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-value">${stats.cleaned_words}</div>
-                                <div class="stat-label">Words Remaining</div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">${stats.cleaned_words}</div>
+                                <div class="text-xs text-gray-500 mt-1">Words Remaining</div>
                             </div>
                         </div>
 
-                        <div class="text-sections">
-                            <div class="text-section">
-                                <div class="text-section-header">Original Text (Preview)</div>
-                                <div class="text-content">${escapeHtml(result.original_text.substring(0, 1000))}${result.original_text.length > 1000 ? '...' : ''}</div>
+                        <div class="grid md:grid-cols-2 gap-5 p-5">
+                            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="bg-gray-50 px-4 py-3 font-semibold border-b border-gray-200 flex justify-between items-center">
+                                    <span>Original Text (Preview)</span>
+                                    <button class="copy-btn px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium transition-all hover:bg-blue-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'original', this)">
+                                        <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy
+                                    </button>
+                                </div>
+                                <div class="p-4 max-h-72 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700">${escapeHtml(result.original_text.substring(0, 1000))}${result.original_text.length > 1000 ? '...' : ''}</div>
                             </div>
-                            <div class="text-section">
-                                <div class="text-section-header">Cleaned Text</div>
-                                <div class="text-content">${escapeHtml(result.cleaned_text)}</div>
+                            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="bg-gray-50 px-4 py-3 font-semibold border-b border-gray-200 flex justify-between items-center">
+                                    <span>Cleaned Text</span>
+                                    <button class="copy-btn px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium transition-all hover:bg-blue-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'cleaned', this)">
+                                        <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy
+                                    </button>
+                                </div>
+                                <div class="p-4 max-h-72 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700">${escapeHtml(result.cleaned_text)}</div>
                             </div>
                         </div>
 
                         ${result.removed_items.length > 0 ? `
-                            <div class="removed-items">
-                                <h4>🗑️ Removed Content</h4>
-                                ${result.removed_items.map(item => `
-                                    <div class="removed-item">
-                                        <div class="removed-item-title">
-                                            ${item.pattern} (${item.count} occurrence${item.count > 1 ? 's' : ''})
+                            <div class="p-5 border-t border-gray-200">
+                                <h4 class="mb-4 text-gray-800 font-semibold flex items-center gap-2">
+                                    <span class="icon"><svg><use href="#icon-trash"/></svg></span> Removed Content (${result.removed_items.reduce((sum, item) => sum + item.matches.length, 0)} snippets)
+                                </h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                    ${result.removed_items.flatMap(item => item.matches).map((match, matchIndex) => `
+                                        <div class="removed-card bg-white border border-amber-200 rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer p-3 hover:border-amber-400" onclick="copySnippet(this, '${escapeHtml(match).replace(/'/g, "\\'")}')">
+                                            <div class="text-sm text-gray-700 break-words">${escapeHtml(match)}</div>
+                                            <div class="copied-indicator hidden mt-2 py-1 bg-emerald-500 text-white text-center text-xs font-medium rounded">
+                                                <span class="icon"><svg><use href="#icon-check"/></svg></span> Copied!
+                                            </div>
                                         </div>
-                                        <div class="removed-item-examples">
-                                            Examples: ${item.matches.slice(0, 3).map(m => escapeHtml(m)).join(', ')}
-                                            ${item.count > 3 ? '...' : ''}
-                                        </div>
-                                    </div>
-                                `).join('')}
+                                    `).join('')}
+                                </div>
                             </div>
                         ` : ''}
                     </div>
@@ -760,9 +436,8 @@
                 resultsDiv.innerHTML += resultHtml;
             });
 
-            resultsDiv.classList.add('show');
+            resultsDiv.classList.remove('hidden');
             
-            // Add event listeners for download buttons
             document.querySelectorAll('.download-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const filename = this.getAttribute('data-filename');
@@ -803,17 +478,17 @@
         }
 
         function showLoading(show) {
-            document.getElementById('loading').classList.toggle('show', show);
+            document.getElementById('loading').classList.toggle('hidden', !show);
         }
 
         function showError(message) {
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = message;
-            errorDiv.classList.add('show');
+            errorDiv.classList.remove('hidden');
         }
 
         function hideError() {
-            document.getElementById('error').classList.remove('show');
+            document.getElementById('error').classList.add('hidden');
         }
 
         function escapeHtml(text) {
@@ -822,10 +497,51 @@
             return div.innerHTML;
         }
 
-        function unescapeHtml(text) {
-            const div = document.createElement('div');
-            div.innerHTML = text;
-            return div.textContent || div.innerText || '';
+        async function copyToClipboard(index, type, button) {
+            try {
+                const text = type === 'cleaned' ? window.cleanedTexts[index] : window.originalTexts[index];
+                if (!text) {
+                    console.error('Text not found for index:', index, 'type:', type);
+                    showError('Text not available for copying');
+                    return;
+                }
+                
+                await navigator.clipboard.writeText(text);
+                
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<span class="icon"><svg><use href="#icon-check"/></svg></span> Copied!';
+                button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                button.classList.add('bg-emerald-500');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('bg-emerald-500');
+                    button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                showError('Failed to copy to clipboard');
+            }
+        }
+        
+        async function copySnippet(card, text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                const indicator = card.querySelector('.copied-indicator');
+                indicator.classList.remove('hidden');
+                card.classList.add('copied-animation');
+                card.style.borderColor = '#10b981';
+                
+                setTimeout(() => {
+                    indicator.classList.add('hidden');
+                    card.classList.remove('copied-animation');
+                    card.style.borderColor = '';
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                showError('Failed to copy to clipboard');
+            }
         }
     </script>
 </body>
