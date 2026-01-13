@@ -34,13 +34,14 @@ class DocumentProcessor:
         except Exception as e:
             raise Exception(f"Error reading document: {str(e)}")
     
-    def process_document(self, file_path, filename):
+    def process_document(self, file_path, filename, profile='titles_and_parentheses'):
         """
         Process a document: extract text, clean it, and return results.
         
         Args:
             file_path: Path to the document file
             filename: Original filename
+            profile: Cleaning profile to use (default: 'titles_and_parentheses')
             
         Returns:
             dict: Processing results including original, cleaned, removed items, and stats
@@ -48,8 +49,8 @@ class DocumentProcessor:
         # Extract text
         original_text = self.extract_text_from_docx(file_path)
         
-        # Clean text
-        cleaned_text, removed_items = self.cleaner.clean_text(original_text)
+        # Clean text with selected profile
+        cleaned_text, removed_items, profile_used = self.cleaner.clean_text(original_text, profile)
         
         # Get statistics
         stats = self.cleaner.get_statistics(original_text, cleaned_text)
@@ -60,6 +61,7 @@ class DocumentProcessor:
             'cleaned_text': cleaned_text,
             'removed_items': removed_items,
             'statistics': stats,
+            'profile': profile_used,
             'success': True
         }
     

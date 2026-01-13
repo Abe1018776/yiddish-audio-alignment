@@ -120,6 +120,7 @@
             color: #333;
         }
 
+        .input-group select,
         .input-group input[type="text"] {
             width: 100%;
             padding: 12px;
@@ -127,11 +128,24 @@
             border-radius: 8px;
             font-size: 16px;
             transition: border-color 0.3s;
+            background: white;
         }
 
+        .input-group select:focus,
         .input-group input[type="text"]:focus {
             outline: none;
             border-color: #667eea;
+        }
+        
+        .input-group select {
+            cursor: pointer;
+        }
+        
+        .profile-info {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
         }
 
         .btn {
@@ -333,6 +347,17 @@
             color: #2e7d32;
             margin-top: 20px;
         }
+        
+        .profile-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
 
         @media (max-width: 768px) {
             .text-sections {
@@ -363,6 +388,14 @@
             </div>
 
             <div id="upload-tab" class="tab-content active">
+                <div class="input-group">
+                    <label for="profileSelectUpload">🎯 Cleaning Profile</label>
+                    <select id="profileSelectUpload" class="profile-select">
+                        <option value="titles_and_parentheses">Titles/Headings + Parentheses After Brackets</option>
+                        <option value="titles_only">Titles/Headings Only</option>
+                    </select>
+                    <div class="profile-info" id="profileInfoUpload">Loading profile descriptions...</div>
+                </div>
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-icon">📁</div>
                     <h3>Drop your Word document here</h3>
@@ -373,6 +406,14 @@
             </div>
 
             <div id="drive-tab" class="tab-content">
+                <div class="input-group">
+                    <label for="profileSelectDrive">🎯 Cleaning Profile</label>
+                    <select id="profileSelectDrive" class="profile-select">
+                        <option value="titles_and_parentheses">Titles/Headings + Parentheses After Brackets</option>
+                        <option value="titles_only">Titles/Headings Only</option>
+                    </select>
+                    <div class="profile-info" id="profileInfoDrive">Loading profile descriptions...</div>
+                </div>
                 <div class="input-group">
                     <label for="driveUrl">Google Drive Folder URL</label>
                     <input type="text" id="driveUrl" placeholder="https://drive.google.com/drive/folders/..." />
@@ -395,6 +436,45 @@
     </div>
 
     <script>
+        // Store profile descriptions
+        let profileDescriptions = {};
+
+        // Load profiles on page load
+        async function loadProfiles() {
+            try {
+                const response = await fetch('/profiles');
+                profileDescriptions = await response.json();
+                updateProfileInfo();
+            } catch (error) {
+                console.error('Failed to load profiles:', error);
+            }
+        }
+
+        // Update profile info text when selection changes
+        function updateProfileInfo() {
+            const uploadSelect = document.getElementById('profileSelectUpload');
+            const driveSelect = document.getElementById('profileSelectDrive');
+            const uploadInfo = document.getElementById('profileInfoUpload');
+            const driveInfo = document.getElementById('profileInfoDrive');
+            
+            if (uploadSelect && uploadInfo) {
+                const selectedProfile = uploadSelect.value;
+                uploadInfo.textContent = profileDescriptions[selectedProfile] || '';
+            }
+            
+            if (driveSelect && driveInfo) {
+                const selectedProfile = driveSelect.value;
+                driveInfo.textContent = profileDescriptions[selectedProfile] || '';
+            }
+        }
+
+        // Add event listeners for profile selection changes
+        document.getElementById('profileSelectUpload')?.addEventListener('change', updateProfileInfo);
+        document.getElementById('profileSelectDrive')?.addEventListener('change', updateProfileInfo);
+
+        // Load profiles when page loads
+        loadProfiles();
+
         // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -460,6 +540,7 @@
 
             const formData = new FormData();
             formData.append('file', selectedFile);
+            formData.append('profile', document.getElementById('profileSelectUpload').value);
 
             showLoading(true);
             hideError();
@@ -487,6 +568,7 @@
         // Process Drive folder
         document.getElementById('processDriveBtn').addEventListener('click', async () => {
             const driveUrl = document.getElementById('driveUrl').value.trim();
+            const profile = document.getElementById('profileSelectDrive').value;
 
             if (!driveUrl) {
                 showError('Please enter a Google Drive folder URL');
@@ -502,7 +584,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ drive_url: driveUrl })
+                    body: JSON.stringify({ drive_url: driveUrl, profile: profile })
                 });
 
                 const data = await response.json();
@@ -540,10 +622,18 @@
                 window.cleanedTexts[index] = result.cleaned_text;
 
                 const stats = result.statistics;
+                const profileName = result.profile || 'unknown';
+                const profileDisplay = profileName === 'titles_only' 
+                    ? 'Titles/Headings Only' 
+                    : 'Titles/Headings + Parentheses After Brackets';
+                
                 const resultHtml = `
                     <div class="result-item">
                         <div class="result-header">
-                            <h3>${escapeHtml(result.filename)}</h3>
+                            <h3>
+                                ${escapeHtml(result.filename)}
+                                <span class="profile-badge">${profileDisplay}</span>
+                            </h3>
                             <button class="btn btn-secondary download-btn" data-filename="${escapeHtml(result.filename)}" data-text-index="${index}">
                                 ⬇️ Download Cleaned
                             </button>

@@ -33,6 +33,15 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/profiles', methods=['GET'])
+def get_profiles():
+    """Get available cleaning profiles."""
+    from cleaner import TranscriptCleaner
+    cleaner = TranscriptCleaner()
+    profiles = cleaner.get_available_profiles()
+    return jsonify(profiles)
+
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload and processing."""
@@ -48,13 +57,16 @@ def upload_file():
         if not allowed_file(file.filename):
             return jsonify({'error': 'Invalid file type. Please upload a .docx or .doc file'}), 400
         
+        # Get the selected profile from the form data
+        profile = request.form.get('profile', 'titles_and_parentheses')
+        
         # Save uploaded file
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Process the document
-        result = processor.process_document(filepath, filename)
+        # Process the document with selected profile
+        result = processor.process_document(filepath, filename, profile)
         
         # Clean up uploaded file
         os.remove(filepath)
@@ -71,6 +83,7 @@ def process_drive():
     try:
         data = request.get_json()
         drive_url = data.get('drive_url', '').strip()
+        profile = data.get('profile', 'titles_and_parentheses')
         
         if not drive_url:
             return jsonify({'error': 'No Google Drive URL provided'}), 400
@@ -93,7 +106,7 @@ def process_drive():
         results = []
         for file_info in downloaded_files:
             try:
-                result = processor.process_document(file_info['path'], file_info['name'])
+                result = processor.process_document(file_info['path'], file_info['name'], profile)
                 results.append(result)
                 # Clean up temp file
                 os.remove(file_info['path'])
