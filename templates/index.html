@@ -32,6 +32,14 @@
         .copied-animation {
             animation: copied-pulse 0.3s ease-out;
         }
+        .removed-text {
+            background-color: #fecaca;
+            text-decoration: line-through;
+            text-decoration-color: #dc2626;
+            color: #991b1b;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body class="bg-blue-600 min-h-screen p-5 font-sans">
@@ -393,44 +401,22 @@
                             </div>
                         </div>
 
-                        <div class="grid md:grid-cols-2 gap-5 p-5">
+                        <div class="p-5">
                             <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                <div class="bg-gray-50 px-4 py-3 font-semibold border-b border-gray-200 flex justify-between items-center">
-                                    <span>Original Text (Preview)</span>
-                                    <button class="copy-btn px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium transition-all hover:bg-blue-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'original', this)">
-                                        <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy
-                                    </button>
+                                <div class="bg-gray-50 px-4 py-3 font-semibold border-b border-gray-200 flex justify-between items-center flex-wrap gap-2">
+                                    <span>Original Text (with removals highlighted)</span>
+                                    <div class="flex gap-2">
+                                        <button class="copy-btn px-3 py-1.5 bg-gray-600 text-white rounded text-sm font-medium transition-all hover:bg-gray-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'original', this)">
+                                            <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy Original
+                                        </button>
+                                        <button class="copy-btn px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium transition-all hover:bg-blue-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'cleaned', this)">
+                                            <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy Cleaned
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="p-4 max-h-72 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700">${escapeHtml(result.original_text.substring(0, 1000))}${result.original_text.length > 1000 ? '...' : ''}</div>
-                            </div>
-                            <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                <div class="bg-gray-50 px-4 py-3 font-semibold border-b border-gray-200 flex justify-between items-center">
-                                    <span>Cleaned Text</span>
-                                    <button class="copy-btn px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium transition-all hover:bg-blue-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'cleaned', this)">
-                                        <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy
-                                    </button>
-                                </div>
-                                <div class="p-4 max-h-72 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700">${escapeHtml(result.cleaned_text)}</div>
+                                <div dir="rtl" class="p-4 max-h-96 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700">${highlightRemovedText(result.original_text, result.removed_items)}</div>
                             </div>
                         </div>
-
-                        ${result.removed_items.length > 0 ? `
-                            <div class="p-5 border-t border-gray-200">
-                                <h4 class="mb-4 text-gray-800 font-semibold flex items-center gap-2">
-                                    <span class="icon"><svg><use href="#icon-trash"/></svg></span> Removed Content (${result.removed_items.reduce((sum, item) => sum + item.matches.length, 0)} snippets)
-                                </h4>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                    ${result.removed_items.flatMap(item => item.matches).map((match, matchIndex) => `
-                                        <div class="removed-card bg-white border border-amber-200 rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer p-3 hover:border-amber-400" onclick="copySnippet(this, '${escapeHtml(match).replace(/'/g, "\\'")}')">
-                                            <div class="text-sm text-gray-700 break-words">${escapeHtml(match)}</div>
-                                            <div class="copied-indicator hidden mt-2 py-1 bg-emerald-500 text-white text-center text-xs font-medium rounded">
-                                                <span class="icon"><svg><use href="#icon-check"/></svg></span> Copied!
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
                     </div>
                 `;
                 resultsDiv.innerHTML += resultHtml;
@@ -497,6 +483,68 @@
             return div.innerHTML;
         }
 
+        function highlightRemovedText(originalText, removedItems) {
+            if (!removedItems || removedItems.length === 0) {
+                return escapeHtml(originalText);
+            }
+            
+            // Collect all removed matches
+            const allMatches = removedItems.flatMap(item => item.matches);
+            
+            if (allMatches.length === 0) {
+                return escapeHtml(originalText);
+            }
+            
+            // Find all occurrences and their positions
+            let positions = [];
+            allMatches.forEach(match => {
+                let startIndex = 0;
+                let index;
+                while ((index = originalText.indexOf(match, startIndex)) !== -1) {
+                    positions.push({ start: index, end: index + match.length, text: match });
+                    startIndex = index + 1;
+                }
+            });
+            
+            // Sort by start position
+            positions.sort((a, b) => a.start - b.start);
+            
+            // Merge overlapping ranges
+            let merged = [];
+            positions.forEach(pos => {
+                if (merged.length === 0) {
+                    merged.push(pos);
+                } else {
+                    const last = merged[merged.length - 1];
+                    if (pos.start <= last.end) {
+                        last.end = Math.max(last.end, pos.end);
+                    } else {
+                        merged.push(pos);
+                    }
+                }
+            });
+            
+            // Build the highlighted HTML
+            let result = '';
+            let lastEnd = 0;
+            merged.forEach(pos => {
+                // Add text before the removed section
+                if (pos.start > lastEnd) {
+                    result += escapeHtml(originalText.substring(lastEnd, pos.start));
+                }
+                // Add the removed section with highlighting
+                const removedText = originalText.substring(pos.start, pos.end);
+                result += `<span class="removed-text">${escapeHtml(removedText)}</span>`;
+                lastEnd = pos.end;
+            });
+            // Add any remaining text
+            if (lastEnd < originalText.length) {
+                result += escapeHtml(originalText.substring(lastEnd));
+            }
+            
+            return result;
+        }
+
         async function copyToClipboard(index, type, button) {
             try {
                 const text = type === 'cleaned' ? window.cleanedTexts[index] : window.originalTexts[index];
@@ -518,26 +566,6 @@
                     button.classList.remove('bg-emerald-500');
                     button.classList.add('bg-blue-600', 'hover:bg-blue-700');
                 }, 2000);
-            } catch (err) {
-                console.error('Failed to copy:', err);
-                showError('Failed to copy to clipboard');
-            }
-        }
-        
-        async function copySnippet(card, text) {
-            try {
-                await navigator.clipboard.writeText(text);
-                
-                const indicator = card.querySelector('.copied-indicator');
-                indicator.classList.remove('hidden');
-                card.classList.add('copied-animation');
-                card.style.borderColor = '#10b981';
-                
-                setTimeout(() => {
-                    indicator.classList.add('hidden');
-                    card.classList.remove('copied-animation');
-                    card.style.borderColor = '';
-                }, 1500);
             } catch (err) {
                 console.error('Failed to copy:', err);
                 showError('Failed to copy to clipboard');
