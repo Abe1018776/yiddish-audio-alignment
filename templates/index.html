@@ -391,8 +391,7 @@
                 <div class="input-group">
                     <label for="profileSelectUpload">🎯 Cleaning Profile</label>
                     <select id="profileSelectUpload" class="profile-select">
-                        <option value="titles_and_parentheses">Titles/Headings + Parentheses After Brackets</option>
-                        <option value="titles_only">Titles/Headings Only</option>
+                        <!-- Options will be populated dynamically from the API -->
                     </select>
                     <div class="profile-info" id="profileInfoUpload">Loading profile descriptions...</div>
                 </div>
@@ -409,8 +408,7 @@
                 <div class="input-group">
                     <label for="profileSelectDrive">🎯 Cleaning Profile</label>
                     <select id="profileSelectDrive" class="profile-select">
-                        <option value="titles_and_parentheses">Titles/Headings + Parentheses After Brackets</option>
-                        <option value="titles_only">Titles/Headings Only</option>
+                        <!-- Options will be populated dynamically from the API -->
                     </select>
                     <div class="profile-info" id="profileInfoDrive">Loading profile descriptions...</div>
                 </div>
@@ -446,17 +444,47 @@
                 const response = await fetch('/profiles');
                 profileDescriptions = await response.json();
                 
-                // Build profile options array
-                profileOptions = Object.keys(profileDescriptions).map(key => ({
+                // Build profile options array (sorted for consistency)
+                const profileKeys = Object.keys(profileDescriptions).sort();
+                profileOptions = profileKeys.map(key => ({
                     value: key,
                     label: formatProfileName(key),
                     description: profileDescriptions[key]
                 }));
                 
+                // Populate dropdown menus
+                populateDropdowns();
+                
+                // Update initial description
                 updateProfileInfo();
             } catch (error) {
                 console.error('Failed to load profiles:', error);
             }
+        }
+        
+        // Populate both dropdown menus with profiles from API
+        function populateDropdowns() {
+            const uploadSelect = document.getElementById('profileSelectUpload');
+            const driveSelect = document.getElementById('profileSelectDrive');
+            
+            [uploadSelect, driveSelect].forEach(select => {
+                if (select) {
+                    // Clear existing options
+                    select.innerHTML = '';
+                    
+                    // Add profile options
+                    profileOptions.forEach((profile, index) => {
+                        const option = document.createElement('option');
+                        option.value = profile.value;
+                        option.textContent = profile.label;
+                        // Select the first option by default
+                        if (index === 0) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+                }
+            });
         }
         
         // Format profile key to display name
@@ -492,8 +520,10 @@
         }
 
         // Add event listeners for profile selection changes
-        document.getElementById('profileSelectUpload')?.addEventListener('change', updateProfileInfo);
-        document.getElementById('profileSelectDrive')?.addEventListener('change', updateProfileInfo);
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('profileSelectUpload')?.addEventListener('change', updateProfileInfo);
+            document.getElementById('profileSelectDrive')?.addEventListener('change', updateProfileInfo);
+        });
 
         // Load profiles when page loads
         loadProfiles();

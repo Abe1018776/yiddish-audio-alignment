@@ -20,12 +20,18 @@ os.makedirs(app.config['TEMP_FOLDER'], exist_ok=True)
 
 processor = DocumentProcessor()
 
+# Cache for cleaning profiles to avoid repeated instantiation
+_cached_profiles = None
+
 
 def get_cleaner_profiles():
-    """Get available cleaning profiles."""
-    from cleaner import TranscriptCleaner
-    cleaner = TranscriptCleaner()
-    return cleaner.get_available_profiles()
+    """Get available cleaning profiles (cached)."""
+    global _cached_profiles
+    if _cached_profiles is None:
+        from cleaner import TranscriptCleaner
+        cleaner = TranscriptCleaner()
+        _cached_profiles = cleaner.get_available_profiles()
+    return _cached_profiles
 
 
 def allowed_file(filename):

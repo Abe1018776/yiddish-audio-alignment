@@ -42,12 +42,13 @@ class TranscriptCleaner:
             'titles_and_parentheses': {
                 'description': 'Removes titles/headings AND all bracketed/parenthetical content',
                 'patterns': [
-                    # Bracketed content followed by parenthetical content
-                    (r'\[.*?\]\s*\(.*?\)', 'brackets followed by parentheses'),
-                    
-                    # Bracketed content (narrator/redactor notes)
+                    # Bracketed content (narrator/redactor notes) - process before special pattern
                     (r'\[.*?\]', 'bracketed notes'),
                     (r'\(.*?\)', 'parenthetical notes'),
+                    
+                    # Bracketed content followed by parenthetical content (special case)
+                    # Note: This pattern is placed after individual patterns to avoid conflicts
+                    (r'\[.*?\]\s*\(.*?\)', 'brackets followed by parentheses'),
                     
                     # Common heading patterns
                     (r'^[A-Z\s]+:.*$', 'headings with colon'),
