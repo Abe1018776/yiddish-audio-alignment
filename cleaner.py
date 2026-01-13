@@ -4,6 +4,9 @@ Removes titles, headings, narrator notes, redactor notes, etc.
 """
 import re
 
+# Default cleaning profile
+DEFAULT_PROFILE = 'titles_and_parentheses'
+
 
 class TranscriptCleaner:
     """Cleans Yiddish transcripts by removing non-transcript content."""
@@ -98,13 +101,13 @@ class TranscriptCleaner:
             for name, profile in self.profiles.items()
         }
     
-    def clean_text(self, text, profile='titles_and_parentheses'):
+    def clean_text(self, text, profile=None):
         """
         Clean the transcript text and return both cleaned text and removed content.
         
         Args:
             text: The original transcript text
-            profile: The cleaning profile to use (default: 'titles_and_parentheses')
+            profile: The cleaning profile to use (default: DEFAULT_PROFILE constant)
                      Available profiles: 'titles_only', 'titles_and_parentheses'
             
         Returns:
@@ -113,9 +116,13 @@ class TranscriptCleaner:
                 - removed_items: List of dicts with 'pattern', 'matches', and 'count'
                 - profile_name: The name of the profile used
         """
+        # Use default profile if none specified
+        if profile is None:
+            profile = DEFAULT_PROFILE
+            
         # Validate profile
         if profile not in self.profiles:
-            profile = 'titles_and_parentheses'  # Default fallback
+            profile = DEFAULT_PROFILE  # Fallback to default
         
         # Get patterns for the selected profile
         removal_patterns = self.profiles[profile]['patterns']

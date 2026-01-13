@@ -393,7 +393,7 @@
                     <select id="profileSelectUpload" class="profile-select">
                         <!-- Options will be populated dynamically from the API -->
                     </select>
-                    <div class="profile-info" id="profileInfoUpload">Loading profile descriptions...</div>
+                    <div class="profile-info" id="profileInfoUpload" aria-live="polite">Loading profile descriptions...</div>
                 </div>
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-icon">📁</div>
@@ -410,7 +410,7 @@
                     <select id="profileSelectDrive" class="profile-select">
                         <!-- Options will be populated dynamically from the API -->
                     </select>
-                    <div class="profile-info" id="profileInfoDrive">Loading profile descriptions...</div>
+                    <div class="profile-info" id="profileInfoDrive" aria-live="polite">Loading profile descriptions...</div>
                 </div>
                 <div class="input-group">
                     <label for="driveUrl">Google Drive Folder URL</label>
@@ -442,6 +442,9 @@
         async function loadProfiles() {
             try {
                 const response = await fetch('/profiles');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 profileDescriptions = await response.json();
                 
                 // Build profile options array (sorted for consistency)
@@ -458,7 +461,12 @@
                 // Update initial description
                 updateProfileInfo();
             } catch (error) {
-                console.error('Failed to load profiles:', error);
+                console.error('Failed to load profiles from API:', error.message || error);
+                // Provide fallback message to user
+                const uploadInfo = document.getElementById('profileInfoUpload');
+                const driveInfo = document.getElementById('profileInfoDrive');
+                if (uploadInfo) uploadInfo.textContent = 'Unable to load profiles. Please refresh the page.';
+                if (driveInfo) driveInfo.textContent = 'Unable to load profiles. Please refresh the page.';
             }
         }
         
@@ -524,12 +532,20 @@
 
         // Add event listeners for profile selection changes
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('profileSelectUpload')?.addEventListener('change', updateProfileInfo);
-            document.getElementById('profileSelectDrive')?.addEventListener('change', updateProfileInfo);
+            // Load profiles first
+            loadProfiles().then(() => {
+                // Then attach event listeners after profiles are loaded
+                const uploadSelect = document.getElementById('profileSelectUpload');
+                const driveSelect = document.getElementById('profileSelectDrive');
+                
+                if (uploadSelect) {
+                    uploadSelect.addEventListener('change', updateProfileInfo);
+                }
+                if (driveSelect) {
+                    driveSelect.addEventListener('change', updateProfileInfo);
+                }
+            });
         });
-
-        // Load profiles when page loads
-        loadProfiles();
 
         // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {

@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from document_processor import DocumentProcessor
 from drive_downloader import DriveDownloader
+from cleaner import TranscriptCleaner, DEFAULT_PROFILE
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -28,7 +29,6 @@ def get_cleaner_profiles():
     """Get available cleaning profiles (cached)."""
     global _cached_profiles
     if _cached_profiles is None:
-        from cleaner import TranscriptCleaner
         cleaner = TranscriptCleaner()
         _cached_profiles = cleaner.get_available_profiles()
     return _cached_profiles
@@ -68,8 +68,8 @@ def upload_file():
         if not allowed_file(file.filename):
             return jsonify({'error': 'Invalid file type. Please upload a .docx or .doc file'}), 400
         
-        # Get the selected profile from the form data
-        profile = request.form.get('profile', 'titles_and_parentheses')
+        # Get the selected profile from the form data (use default if not specified)
+        profile = request.form.get('profile', DEFAULT_PROFILE)
         
         # Save uploaded file
         filename = secure_filename(file.filename)
@@ -94,7 +94,7 @@ def process_drive():
     try:
         data = request.get_json()
         drive_url = data.get('drive_url', '').strip()
-        profile = data.get('profile', 'titles_and_parentheses')
+        profile = data.get('profile', DEFAULT_PROFILE)
         
         if not drive_url:
             return jsonify({'error': 'No Google Drive URL provided'}), 400
