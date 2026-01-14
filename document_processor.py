@@ -281,6 +281,8 @@ class DocumentProcessor:
                 else:
                     # Check for partial match - para_text is the start of a textbox
                     # This handles drop caps where "T" might be the first char of a textbox
+                    # Note: Linear search is acceptable here since all_textboxes is typically
+                    # very small (0-5 items in most documents)
                     for tb in all_textboxes:
                         if tb not in used_textbox_content and tb.startswith(para_text):
                             is_likely_textbox = True
@@ -298,8 +300,7 @@ class DocumentProcessor:
                     indices_to_remove.append(i)
                     # Mark both the paragraph text and the matched textbox as used
                     used_textbox_content.add(para_text)
-                    if matched_textbox:
-                        used_textbox_content.add(matched_textbox)
+                    used_textbox_content.add(matched_textbox)
         
         # Remove merged paragraphs in reverse order to maintain indices
         for i in reversed(indices_to_remove):
