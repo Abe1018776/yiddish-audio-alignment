@@ -132,7 +132,7 @@ class TestGetConfusionZone:
 
 class TestEndpointFormatResult:
     def test_format_with_words(self):
-        from blueprints.alignment_bp import _format_result
+        from blueprints.alignment_bp import _format_local_result as _format_result
 
         word = MockWord(0.0, 0.5, 0.92, "test")
         seg = MockSegment(0, 0.0, 0.5, "test", words=[word])
@@ -149,7 +149,7 @@ class TestEndpointFormatResult:
         assert formatted["timestamps"][0]["confidence"] == 0.92
 
     def test_format_without_words(self):
-        from blueprints.alignment_bp import _format_result
+        from blueprints.alignment_bp import _format_local_result as _format_result
 
         seg = MockSegment(0, 0.0, 2.5, "test segment", words=[])
         result = MagicMock()
