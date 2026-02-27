@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yiddish Audio Alignment — KohnAI</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e4e4e7;
+      --muted: #8b8d98;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --success: #22c55e;
+      --error: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--muted);
+    }
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 1rem;
+    }
+    .file-drop:hover, .file-drop.dragover {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.05);
+    }
+    .file-drop.has-file {
+      border-color: var(--success);
+      background: rgba(34, 197, 94, 0.05);
+    }
+    .file-drop .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .file-drop .label { color: var(--muted); font-size: 0.9rem; }
+    .file-drop .filename { color: var(--success); font-weight: 500; margin-top: 0.5rem; }
+    .file-drop input { display: none; }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      resize: vertical;
+      direction: rtl;
+    }
+    textarea:focus { outline: none; border-color: var(--accent); }
+    .row { display: flex; gap: 1rem; align-items: flex-end; }
+    select, input[type="text"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.75rem;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    select:focus, input[type="text"]:focus { outline: none; border-color: var(--accent); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-row { display: flex; gap: 0.75rem; margin-top: 1rem; }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .status {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .status.loading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: var(--accent-hover);
+    }
+    .status.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--error);
+    }
+    .status.success {
+      display: block;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: var(--success);
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid transparent;
+      border-top-color: var(--accent-hover);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Results */
+    .results { display: none; }
+    .results.visible { display: block; }
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .results-header h2 { font-size: 1.1rem; }
+    .results-stats {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .results-stats span strong { color: var(--text); }
+    .word-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      direction: rtl;
+    }
+    .word-chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .word-chip:hover {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.1);
+    }
+    .word-chip.playing {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.15);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+    }
+    .word-chip .time {
+      display: block;
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .conf-high { border-left: 3px solid var(--success); }
+    .conf-mid { border-left: 3px solid #eab308; }
+    .conf-low { border-left: 3px solid var(--error); }
+
+    /* Audio player */
+    .audio-player {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .audio-player audio { width: 100%; }
+
+    /* Segment table */
+    .seg-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+    }
+    .seg-table th {
+      text-align: left;
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .seg-table td {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .seg-table td:last-child { direction: rtl; }
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+    .tab {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .json-output {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'SF Mono', Monaco, 'Fira Code', monospace;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre;
+      direction: ltr;
+    }
+    .mode-toggle {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .mode-toggle button {
+      flex: 1;
+      padding: 0.6rem;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mode-toggle button.active {
+      background: var(--accent);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Yiddish Audio Alignment</h1>
+    <p class="subtitle">Upload audio and text to get word-level timestamps powered by yi-whisper</p>
+
+    <div class="mode-toggle">
+      <button id="mode-align" class="active" onclick="setMode('align')">Align Text</button>
+      <button id="mode-transcribe" onclick="setMode('transcribe')">Transcribe Only</button>
+    </div>
+
+    <div class="card">
+      <label>Audio File</label>
+      <div class="file-drop" id="fileDrop">
+        <div class="icon">🎵</div>
+        <div class="label">Drop audio file here or click to browse</div>
+        <div class="label" style="font-size:0.8rem; margin-top:0.25rem">MP3, WAV, M4A, OGG, FLAC</div>
+        <div class="filename" id="fileName"></div>
+        <input type="file" id="audioInput" accept="audio/*">
+      </div>
+
+      <div id="textSection">
+        <label>Yiddish Text (for alignment)</label>
+        <textarea id="textInput" placeholder="פּאַסט דאָ דעם ייִדישן טעקסט..."></textarea>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="submitBtn" onclick="submit()">
+          <span id="btnText">Align Audio</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="status" id="status">
+      <div class="spinner" id="statusSpinner"></div>
+      <span id="statusText">Processing...</span>
+    </div>
+
+    <div class="results card" id="results">
+      <div class="results-header">
+        <h2>Results</h2>
+        <button class="btn btn-secondary" style="width:auto;padding:0.4rem 1rem;font-size:0.8rem" onclick="downloadJSON()">Download JSON</button>
+      </div>
+
+      <div class="results-stats" id="resultsStats"></div>
+
+      <div class="audio-player" id="audioPlayer">
+        <audio id="audioEl" controls></audio>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab('words')">Words</div>
+        <div class="tab" onclick="switchTab('segments')">Segments</div>
+        <div class="tab" onclick="switchTab('json')">JSON</div>
+      </div>
+
+      <div class="tab-content active" id="tab-words">
+        <div class="word-grid" id="wordGrid"></div>
+      </div>
+
+      <div class="tab-content" id="tab-segments">
+        <table class="seg-table">
+          <thead><tr><th>Start</th><th>End</th><th>Text</th></tr></thead>
+          <tbody id="segBody"></tbody>
+        </table>
+      </div>
+
+      <div class="tab-content" id="tab-json">
+        <div class="json-output" id="jsonOutput"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = 'align';
+    let resultData = null;
+    let audioFile = null;
+    const audioEl = document.getElementById('audioEl');
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('mode-align').classList.toggle('active', mode === 'align');
+      document.getElementById('mode-transcribe').classList.toggle('active', mode === 'transcribe');
+      document.getElementById('textSection').style.display = mode === 'align' ? 'block' : 'none';
+      document.getElementById('btnText').textContent = mode === 'align' ? 'Align Audio' : 'Transcribe Audio';
+    }
+
+    // File drop
+    const fileDrop = document.getElementById('fileDrop');
+    const audioInput = document.getElementById('audioInput');
+
+    fileDrop.addEventListener('click', () => audioInput.click());
+    fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('dragover'); });
+    fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('dragover'));
+    fileDrop.addEventListener('drop', e => {
+      e.preventDefault();
+      fileDrop.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    audioInput.addEventListener('change', e => {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+      audioFile = file;
+      fileDrop.classList.add('has-file');
+      document.getElementById('fileName').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+      audioEl.src = URL.createObjectURL(file);
+    }
+
+    function setStatus(type, msg) {
+      const el = document.getElementById('status');
+      el.className = 'status ' + type;
+      document.getElementById('statusText').textContent = msg;
+      document.getElementById('statusSpinner').style.display = type === 'loading' ? 'block' : 'none';
+    }
+
+    async function submit() {
+      if (!audioFile) { setStatus('error', 'Please select an audio file'); return; }
+      if (currentMode === 'align' && !document.getElementById('textInput').value.trim()) {
+        setStatus('error', 'Please enter text for alignment'); return;
+      }
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      setStatus('loading', currentMode === 'align' ? 'Aligning audio to text...' : 'Transcribing audio...');
+      document.getElementById('results').classList.remove('visible');
+
+      try {
+        // Read file as base64
+        const base64 = await fileToBase64(audioFile);
+        const payload = {
+          mode: currentMode,
+          audio_base64: base64,
+          audio_format: '.' + (audioFile.name.split('.').pop() || 'wav'),
+          language: 'yi',
+        };
+        if (currentMode === 'align') {
+          payload.text = document.getElementById('textInput').value.trim();
+        }
+
+        const resp = await fetch('/api/align', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Request failed');
+
+        resultData = data;
+        renderResults(data);
+        setStatus('success', `Done! ${data.timestamps?.length || 0} words aligned in ${currentMode} mode`);
+      } catch (err) {
+        setStatus('error', err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderResults(data) {
+      document.getElementById('results').classList.add('visible');
+
+      // Stats
+      const stats = document.getElementById('resultsStats');
+      const wordCount = data.timestamps?.length || 0;
+      const segCount = data.segments?.length || 0;
+      stats.innerHTML = `
+        <span><strong>${wordCount}</strong> words</span>
+        <span><strong>${segCount}</strong> segments</span>
+        <span>Model: <strong>${data.model || 'yi-whisper'}</strong></span>
+      `;
+
+      // Word grid
+      const grid = document.getElementById('wordGrid');
+      grid.innerHTML = '';
+      (data.timestamps || []).forEach((ts, i) => {
+        const chip = document.createElement('div');
+        const conf = ts.confidence;
+        const confClass = conf == null ? '' : conf >= 0.5 ? 'conf-high' : conf >= 0.2 ? 'conf-mid' : 'conf-low';
+        chip.className = `word-chip ${confClass}`;
+        chip.innerHTML = `${ts.text}<span class="time">${ts.start.toFixed(2)}s</span>`;
+        chip.onclick = () => playWord(ts.start, ts.end, chip);
+        grid.appendChild(chip);
+      });
+
+      // Segments table
+      const tbody = document.getElementById('segBody');
+      tbody.innerHTML = '';
+      (data.segments || []).forEach(seg => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${seg.start.toFixed(2)}s</td><td>${seg.end.toFixed(2)}s</td><td>${seg.text}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      // JSON
+      document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2);
+    }
+
+    let wordChips = []; // stored references for timeupdate highlighting
+
+    function playWord(start, end, chipEl) {
+      // Start continuous playback from this word
+      audioEl.currentTime = start;
+      audioEl.play();
+    }
+
+    // Continuous word highlighting — tracks playback position
+    let lastHighlightedIndex = -1;
+    audioEl.addEventListener('timeupdate', () => {
+      if (!resultData || !resultData.timestamps) return;
+      const t = audioEl.currentTime;
+      const timestamps = resultData.timestamps;
+      const chips = document.querySelectorAll('.word-chip');
+
+      for (let i = 0; i < timestamps.length; i++) {
+        const ts = timestamps[i];
+        if (ts && t >= ts.start && t < ts.end) {
+          if (i !== lastHighlightedIndex) {
+            document.querySelectorAll('.word-chip.playing').forEach(c => c.classList.remove('playing'));
+            if (chips[i]) chips[i].classList.add('playing');
+            lastHighlightedIndex = i;
+          }
+          break;
+        }
+      }
+    });
+
+    // Clear highlights when audio pauses or ends
+    audioEl.addEventListener('pause', () => {
+      document.querySelectorAll('.word-chip.playing').forEach(c => c.classList.remove('playing'));
+    });
+    audioEl.addEventListener('ended', () => {
+      document.querySelectorAll('.word-chip.playing').forEach(c => c.classList.remove('playing'));
+    });
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    function downloadJSON() {
+      if (!resultData) return;
+      const blob = new Blob([JSON.stringify(resultData, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'alignment-result.json';
+      a.click();
+    }
+  </script>
+</body>
+</html>

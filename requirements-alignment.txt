@@ -1,0 +1,7 @@
+# Heavy ML dependencies for stable-ts alignment
+# Install separately: pip install -r requirements-alignment.txt
+stable-ts>=2.16.0
+faster-whisper>=1.0.0
+torch>=2.0.0
+numpy>=1.24.0
+tqdm>=4.65.0
