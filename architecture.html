@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yiddish Audio Alignment - Architecture & User Journey</title>
+<title>Yiddish Audio-Text Alignment - Architecture & User Journey</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -24,39 +24,42 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.6;
-    overflow-x: hidden;
+    background: var(--bg); color: var(--text);
+    line-height: 1.6; overflow-x: hidden;
   }
 
   /* NAV */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(15,23,42,0.95);
-    backdrop-filter: blur(12px);
+    background: rgba(15,23,42,0.95); backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    display: flex; align-items: center; gap: 1.5rem;
-    height: 56px;
+    padding: 0 2rem; display: flex; align-items: center; gap: 1.5rem; height: 56px;
+    overflow-x: auto;
   }
   nav .logo { font-weight: 700; font-size: 1.1rem; color: var(--accent); white-space: nowrap; }
   nav a {
     color: var(--text-dim); text-decoration: none; font-size: 0.85rem;
-    padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.2s;
+    padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.2s; white-space: nowrap;
   }
   nav a:hover, nav a.active { color: var(--text); background: var(--surface); }
 
   /* HERO */
   .hero {
-    margin-top: 56px; padding: 4rem 2rem 3rem;
-    text-align: center;
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-    border-bottom: 1px solid var(--border);
+    margin-top: 56px; padding: 4rem 2rem 3rem; text-align: center;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #172554 70%, #0f172a 100%);
+    border-bottom: 1px solid var(--border); position: relative; overflow: hidden;
   }
+  .hero::before {
+    content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle at 30% 50%, rgba(56,189,248,0.06) 0%, transparent 50%),
+                radial-gradient(circle at 70% 50%, rgba(129,140,248,0.06) 0%, transparent 50%);
+    animation: pulse 8s ease-in-out infinite alternate;
+  }
+  @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+  .hero > * { position: relative; z-index: 1; }
   .hero h1 { font-size: 2.6rem; font-weight: 800; margin-bottom: 0.5rem; }
-  .hero h1 span { color: var(--accent); }
-  .hero p { color: var(--text-dim); font-size: 1.15rem; max-width: 700px; margin: 0 auto; }
+  .hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: var(--text-dim); font-size: 1.15rem; max-width: 750px; margin: 0 auto; }
   .hero .badges { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
   .badge {
     display: inline-flex; align-items: center; gap: 0.3rem;
@@ -85,14 +88,12 @@
   .card-grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
   .card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.5rem;
-    transition: transform 0.2s, border-color 0.2s;
+    border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, border-color 0.2s;
   }
   .card:hover { transform: translateY(-2px); border-color: var(--accent); }
   .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
   .card p, .card li { color: var(--text-dim); font-size: 0.9rem; }
   .card ul { list-style: none; padding: 0; }
-  .card ul li::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle; }
   .card .icon {
     width: 40px; height: 40px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
@@ -121,32 +122,27 @@
   .flow-node.teal { background: rgba(45,212,191,0.12); border-color: var(--teal); color: var(--teal); }
   .flow-node.red { background: rgba(248,113,113,0.12); border-color: var(--red); color: var(--red); }
   .flow-node.yellow { background: rgba(251,191,36,0.12); border-color: var(--yellow); color: var(--yellow); }
-  .flow-node small { display: block; font-weight: 400; font-size: 0.75rem; opacity: 0.8; }
+  .flow-node small { display: block; font-weight: 400; font-size: 0.75rem; opacity: 0.8; white-space: normal; }
   .flow-arrow { color: var(--text-dim); font-size: 1.2rem; flex-shrink: 0; }
   .flow-arrow.down { transform: rotate(90deg); }
   .flow-split { display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; }
   .flow-branch {
     display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
-    padding: 1rem; border: 1px dashed var(--border); border-radius: 12px; min-width: 180px;
+    padding: 1.2rem; border: 1px dashed var(--border); border-radius: 12px; min-width: 200px; flex: 1; max-width: 350px;
   }
   .flow-branch-label {
     font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.08em; padding: 0.2rem 0.6rem; border-radius: 4px;
-    margin-bottom: 0.3rem;
+    letter-spacing: 0.08em; padding: 0.2rem 0.6rem; border-radius: 4px; margin-bottom: 0.3rem;
   }
 
-  /* PIPELINE VISUALIZATION */
-  .pipeline {
-    display: flex; flex-direction: column; gap: 0;
-    position: relative;
-  }
+  /* PIPELINE */
+  .pipeline { display: flex; flex-direction: column; gap: 0; position: relative; }
   .pipeline::before {
     content: ''; position: absolute; left: 24px; top: 24px; bottom: 24px;
     width: 2px; background: var(--border);
   }
   .pipeline-step {
-    display: flex; align-items: flex-start; gap: 1rem;
-    padding: 0.8rem 0; position: relative;
+    display: flex; align-items: flex-start; gap: 1rem; padding: 0.8rem 0; position: relative;
   }
   .pipeline-dot {
     width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
@@ -161,7 +157,7 @@
   .file-tree {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 12px; padding: 1.5rem; font-family: 'Cascadia Code', 'Fira Code', monospace;
-    font-size: 0.82rem; line-height: 1.8; overflow-x: auto;
+    font-size: 0.8rem; line-height: 1.8; overflow-x: auto; white-space: pre;
   }
   .file-tree .dir { color: var(--accent); font-weight: 700; }
   .file-tree .file { color: var(--text-dim); }
@@ -181,8 +177,7 @@
     border-bottom: 1px solid var(--border);
   }
   .data-table td {
-    padding: 0.7rem 1rem; border-bottom: 1px solid rgba(71,85,105,0.4);
-    vertical-align: top;
+    padding: 0.7rem 1rem; border-bottom: 1px solid rgba(71,85,105,0.4); vertical-align: top;
   }
   .data-table tr:last-child td { border-bottom: none; }
   .data-table code {
@@ -201,29 +196,25 @@
   .journey-tab {
     padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer;
     background: var(--surface); border: 1px solid var(--border);
-    font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
-    color: var(--text-dim);
+    font-size: 0.85rem; font-weight: 600; transition: all 0.2s; color: var(--text-dim);
   }
   .journey-tab:hover { border-color: var(--accent); color: var(--text); }
   .journey-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
   .journey-panel { display: none; }
   .journey-panel.active { display: block; }
 
-  /* STEP CARDS */
+  /* STEPS */
   .steps { display: flex; flex-direction: column; gap: 0; position: relative; }
   .steps::before {
     content: ''; position: absolute; left: 19px; top: 28px; bottom: 28px;
     width: 2px; background: linear-gradient(to bottom, var(--accent), var(--accent2), var(--green));
   }
-  .step {
-    display: flex; gap: 1rem; position: relative; padding: 0.5rem 0;
-  }
+  .step { display: flex; gap: 1rem; position: relative; padding: 0.5rem 0; }
   .step-num {
     width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
     font-weight: 800; font-size: 0.85rem; z-index: 1;
-    background: var(--surface); border: 2px solid var(--accent);
-    color: var(--accent);
+    background: var(--surface); border: 2px solid var(--accent); color: var(--accent);
   }
   .step-body {
     flex: 1; background: var(--surface); border: 1px solid var(--border);
@@ -232,409 +223,439 @@
   .step-body h4 { font-size: 0.95rem; margin-bottom: 0.3rem; }
   .step-body p { color: var(--text-dim); font-size: 0.85rem; }
 
-  /* SCORING VIZ */
-  .score-bar-container { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; }
-  .score-row { display: flex; align-items: center; gap: 0.8rem; }
-  .score-label { width: 90px; text-align: right; font-size: 0.8rem; font-weight: 600; }
-  .score-bar-bg {
-    flex: 1; height: 24px; background: var(--surface2); border-radius: 6px;
-    overflow: hidden; position: relative;
+  /* ALGO VIZ */
+  .algo-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.5rem; margin-bottom: 1rem;
   }
-  .score-bar {
-    height: 100%; border-radius: 6px; display: flex; align-items: center;
-    padding-left: 0.5rem; font-size: 0.7rem; font-weight: 700; transition: width 1s ease;
+  .algo-box h3 { margin-bottom: 0.8rem; }
+  .algo-step {
+    display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(71,85,105,0.3);
   }
-  .score-bar.excellent { background: linear-gradient(90deg, #22c55e, #4ade80); color: #052e16; }
-  .score-bar.good { background: linear-gradient(90deg, #3b82f6, #60a5fa); color: #172554; }
-  .score-bar.moderate { background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #451a03; }
-  .score-bar.low { background: linear-gradient(90deg, #ef4444, #f87171); color: #450a0a; }
+  .algo-step:last-child { border-bottom: none; }
+  .algo-step .num {
+    width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.75rem;
+  }
+  .algo-step p { font-size: 0.85rem; color: var(--text-dim); }
+  .algo-step strong { color: var(--text); }
 
-  /* TECH STACK */
+  /* CONFIDENCE VIZ */
+  .conf-bar { display: flex; height: 32px; border-radius: 8px; overflow: hidden; margin: 0.5rem 0; }
+  .conf-bar div { display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; }
+
+  /* TECH PILLS */
   .tech-group { margin-bottom: 1.5rem; }
   .tech-group h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--accent); }
   .tech-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .tech-pill {
     padding: 0.35rem 0.8rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
     background: var(--surface); border: 1px solid var(--border);
-    display: flex; align-items: center; gap: 0.3rem;
   }
+
+  /* SEPARATOR */
+  .section-sep { max-width: 1200px; margin: 0 auto; border-top: 1px solid var(--border); }
+
+  /* WORD CHIPS (demo) */
+  .word-chips { display: flex; flex-wrap: wrap; gap: 4px; direction: rtl; justify-content: flex-start; margin: 0.8rem 0; }
+  .word-chip {
+    padding: 4px 10px; border-radius: 6px; font-size: 0.82rem; font-weight: 600;
+    background: var(--surface2); border: 2px solid; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .word-chip:hover { transform: scale(1.1); }
+  .word-chip.high { border-color: var(--green); color: var(--green); }
+  .word-chip.med { border-color: var(--yellow); color: var(--yellow); }
+  .word-chip.low { border-color: var(--red); color: var(--red); }
+  .word-chip.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 
   /* RESPONSIVE */
   @media (max-width: 768px) {
-    nav { gap: 0.5rem; padding: 0 0.8rem; overflow-x: auto; }
+    nav { gap: 0.5rem; padding: 0 0.8rem; }
     .hero h1 { font-size: 1.8rem; }
     section { padding: 2rem 1rem; }
     .flow-row { flex-direction: column; }
     .flow-arrow { transform: rotate(90deg) !important; }
-    .card-grid.cols-2, .card-grid.cols-3, .card-grid.cols-4 {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  /* SEPARATOR */
-  .section-sep {
-    max-width: 1200px; margin: 0 auto;
-    border-top: 1px solid var(--border);
-  }
-
-  /* TOOLTIP */
-  .tip {
-    position: relative; cursor: help;
-    border-bottom: 1px dotted var(--text-dim);
-  }
-  .tip:hover::after {
-    content: attr(data-tip);
-    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-    background: var(--surface2); color: var(--text); font-size: 0.75rem;
-    padding: 0.4rem 0.8rem; border-radius: 6px; white-space: nowrap;
-    border: 1px solid var(--border); z-index: 10; pointer-events: none;
+    .card-grid.cols-2, .card-grid.cols-3, .card-grid.cols-4 { grid-template-columns: 1fr; }
+    .flow-split { flex-direction: column; align-items: center; }
+    .flow-branch { max-width: none; width: 100%; }
   }
 
   /* ANIM */
   .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.5s, transform 0.5s; }
   .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem 1.2rem; font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.8rem; line-height: 1.7; overflow-x: auto; color: #c9d1d9;
+  }
+  .code-block .kw { color: #ff7b72; }
+  .code-block .str { color: #a5d6ff; }
+  .code-block .cmt { color: #8b949e; font-style: italic; }
+  .code-block .fn { color: #d2a8ff; }
+  .code-block .num { color: #79c0ff; }
+
+  /* INFRA DIAGRAM */
+  .infra-layer {
+    display: flex; align-items: stretch; gap: 1rem; margin: 1rem 0; flex-wrap: wrap;
+    justify-content: center;
+  }
+  .infra-box {
+    flex: 1; min-width: 200px; max-width: 350px;
+    background: var(--surface); border: 2px solid var(--border); border-radius: 12px;
+    padding: 1.2rem; text-align: center;
+  }
+  .infra-box h4 { font-size: 0.9rem; margin-bottom: 0.3rem; }
+  .infra-box p { font-size: 0.8rem; color: var(--text-dim); }
+  .infra-box .tag {
+    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+    font-size: 0.7rem; font-weight: 700; margin-top: 0.5rem;
+  }
+  .infra-connector {
+    display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+    color: var(--text-dim); min-width: 30px;
+  }
 </style>
 </head>
 <body>
 
 <!-- NAV -->
 <nav>
-  <div class="logo">Yiddish Transcript Cleaner</div>
+  <div class="logo">Yiddish Alignment</div>
   <a href="#overview" class="active">Overview</a>
   <a href="#architecture">Architecture</a>
-  <a href="#pipeline">Pipeline</a>
-  <a href="#data-flow">Data Flow</a>
+  <a href="#algorithm">Algorithm</a>
+  <a href="#deployment">Deployment</a>
   <a href="#journeys">User Journeys</a>
   <a href="#api">API</a>
-  <a href="#scoring">Scoring</a>
+  <a href="#data-models">Data</a>
   <a href="#tech">Tech Stack</a>
   <a href="#files">Files</a>
+  <a href="#decisions">Decisions</a>
 </nav>
 
 <!-- HERO -->
 <div class="hero">
-  <h1>Clean <span>Yiddish</span> Transcripts</h1>
-  <p>A web application for cleaning Yiddish transcripts by removing non-speech editorial content from Word documents to extract pure spoken content.</p>
+  <h1>Yiddish <span>Audio-Text Alignment</span></h1>
+  <p>GPU-accelerated word-level timestamp alignment for Yiddish audio recordings using a confusion-aware Whisper algorithm, deployed on RunPod serverless with a Cloudflare Pages frontend.</p>
   <div class="badges">
-    <span class="badge"><span class="dot" style="background:var(--accent)"></span> Plugin Architecture</span>
-    <span class="badge"><span class="dot" style="background:var(--green)"></span> Rule-Based + LLM</span>
-    <span class="badge"><span class="dot" style="background:var(--orange)"></span> RTL / Hebrew / Yiddish</span>
-    <span class="badge"><span class="dot" style="background:var(--pink)"></span> Google Drive & Sheets</span>
-    <span class="badge"><span class="dot" style="background:var(--accent2)"></span> Quality Scoring</span>
+    <span class="badge"><span class="dot" style="background:var(--accent)"></span> stable-ts / Whisper</span>
+    <span class="badge"><span class="dot" style="background:var(--green)"></span> Word-Level Timestamps</span>
+    <span class="badge"><span class="dot" style="background:var(--orange)"></span> Confusion-Aware</span>
+    <span class="badge"><span class="dot" style="background:var(--pink)"></span> RunPod GPU Serverless</span>
+    <span class="badge"><span class="dot" style="background:var(--accent2)"></span> Cloudflare Pages</span>
+    <span class="badge"><span class="dot" style="background:var(--teal)"></span> Karaoke Playback</span>
   </div>
 </div>
 
 <!-- 1. OVERVIEW -->
 <section id="overview" class="fade-in">
   <h2><span class="num">1</span> Project Overview</h2>
-  <p class="subtitle">What this project does and the problem it solves</p>
+  <p class="subtitle">What this project does, the problem it solves, and where it came from</p>
 
   <div class="card-grid cols-2">
     <div class="card">
       <div class="icon" style="background:rgba(56,189,248,0.15); color:var(--accent);">&#x1F3A4;</div>
       <h3>The Problem</h3>
-      <p>Yiddish oral recordings (Chassidic lectures, shiurim) are transcribed into Word documents. Transcribers add editorial content &mdash; titles, section numbers (Hebrew gematria), source citations, stage directions, timestamps &mdash; that are <strong>not part of the original speech</strong>.</p>
-      <p style="margin-top:0.5rem">When aligning audio to text, or producing clean reading copies, this editorial content must be stripped out while preserving every word that was actually spoken.</p>
+      <p>Yiddish oral recordings (Chassidic lectures, shiurim) have existing transcripts, but no timing information. To build audio players with word-highlighting, searchable audio, or subtitle tracks, you need <strong>word-level timestamps</strong> &mdash; the exact start/end time of every spoken word.</p>
+      <p style="margin-top:0.5rem">Naive Whisper alignment fails on long recordings because the model's confidence degrades over time, producing garbage timestamps in "confusion zones."</p>
     </div>
     <div class="card">
       <div class="icon" style="background:rgba(74,222,128,0.15); color:var(--green);">&#x2728;</div>
       <h3>The Solution</h3>
-      <p>A dual-mode cleaning system:</p>
+      <p>A <strong>confusion-aware iterative alignment algorithm</strong> adapted from <a href="https://github.com/ivrit-ai/ivrit.ai" style="color:var(--accent)">ivrit-ai</a> (Hebrew) for Yiddish:</p>
       <ul style="margin-top:0.5rem">
-        <li style="color:var(--accent)">&#x2022; <strong>Rule-Based Pipeline</strong> &mdash; 9 modular processor plugins that use regex, Word styles/fonts, and Hebrew gematria validation</li>
-        <li style="color:var(--green)">&#x2022; <strong>LLM Mode</strong> &mdash; Send text to AI models (OpenAI, Anthropic, Google, Groq, etc.) for context-aware cleaning</li>
+        <li>&#x2022; Detects when Whisper gets confused (quality drops)</li>
+        <li>&#x2022; Backtracks to a known-good segment and retries</li>
+        <li>&#x2022; Skips irrecoverable zones and continues after</li>
+        <li>&#x2022; Stitches all pieces into a final timestamped result</li>
       </ul>
-      <p style="margin-top:0.5rem">Supports single files, Google Drive folders, and Google Sheets batch processing.</p>
+      <p style="margin-top:0.5rem">Uses <strong>yi-whisper-large-v3-turbo</strong> (Yiddish-finetuned Whisper) on GPU via RunPod serverless.</p>
+    </div>
+  </div>
+
+  <div class="card-grid cols-3" style="margin-top:1rem;">
+    <div class="card" style="border-left: 3px solid var(--accent);">
+      <h3>Two Modes</h3>
+      <ul>
+        <li>&#x2022; <strong style="color:var(--accent)">Align</strong> &mdash; Audio + transcript &rarr; word timestamps</li>
+        <li>&#x2022; <strong style="color:var(--green)">Transcribe</strong> &mdash; Audio only &rarr; text + timestamps</li>
+      </ul>
+    </div>
+    <div class="card" style="border-left: 3px solid var(--orange);">
+      <h3>Origin</h3>
+      <p>Adapted from <code>ivrit-ai/ivrit.ai</code> (Hebrew). Key changes: model changed to <code>yi-whisper</code>, language forced to <code>"yi"</code>, added plain-text input support.</p>
+    </div>
+    <div class="card" style="border-left: 3px solid var(--pink);">
+      <h3>Base Project</h3>
+      <p>Branch extends <code>clean-yiddish-transcripts</code> (a Flask transcript cleaner). The alignment feature adds new files only &mdash; no existing files modified.</p>
     </div>
   </div>
 </section>
 
 <div class="section-sep"></div>
 
-<!-- 2. HIGH-LEVEL ARCHITECTURE -->
+<!-- 2. SYSTEM ARCHITECTURE -->
 <section id="architecture" class="fade-in">
   <h2><span class="num">2</span> System Architecture</h2>
-  <p class="subtitle">How all the major components connect</p>
+  <p class="subtitle">Three-tier deployment: Cloudflare Pages frontend, API proxy, RunPod GPU backend</p>
 
   <div class="flow-container">
-    <!-- Top layer: Inputs -->
+    <!-- User -->
     <div style="text-align:center; margin-bottom:0.5rem;">
-      <span class="flow-branch-label" style="background:rgba(56,189,248,0.15); color:var(--accent);">Input Sources</span>
+      <span class="flow-branch-label" style="background:rgba(129,140,248,0.15); color:var(--accent2);">User</span>
     </div>
     <div class="flow-row">
-      <div class="flow-node blue">&#x1F4C4; File Upload<small>.doc / .docx</small></div>
-      <div class="flow-node blue">&#x1F4C1; Google Drive<small>Files & Folders</small></div>
-      <div class="flow-node blue">&#x1F4CA; Google Sheets<small>Batch Processing</small></div>
-    </div>
-
-    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
-
-    <!-- Web UI -->
-    <div class="flow-row">
-      <div class="flow-node purple" style="min-width:400px;">
-        &#x1F310; Web UI &mdash; Single-Page Application
-        <small>index.html &bull; Tailwind CSS &bull; Vanilla JS &bull; ~2700 lines</small>
+      <div class="flow-node purple" style="min-width:350px;">
+        &#x1F9D1; User's Browser
+        <small>Drops audio file + pastes Yiddish transcript text</small>
       </div>
     </div>
 
-    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
+    <div class="flow-row"><span class="flow-arrow" style="transform:rotate(90deg)">&#x25B6;</span></div>
 
-    <!-- Flask API -->
+    <!-- Cloudflare -->
+    <div style="text-align:center; margin-top:0.3rem;">
+      <span class="flow-branch-label" style="background:rgba(56,189,248,0.15); color:var(--accent);">Frontend + API Proxy</span>
+    </div>
     <div class="flow-row">
-      <div class="flow-node orange" style="min-width:400px;">
-        &#x2699;&#xFE0F; Flask API Server
-        <small>app.py &bull; 16 endpoints &bull; Port 5050</small>
+      <div class="flow-node blue" style="min-width:250px;">
+        &#x1F310; Cloudflare Pages
+        <small>align.kohnai.ai</small>
       </div>
     </div>
-
-    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
-
-    <!-- Document Processing Layer -->
-    <div class="flow-row">
-      <div class="flow-node teal" style="min-width:300px;">
-        &#x1F4D1; Document Processor
-        <small>document_processor.py &bull; Parse .docx, extract metadata</small>
-      </div>
-      <span class="flow-arrow">&#x25C0;</span>
-      <div class="flow-node yellow">
-        &#x1F504; Converter
-        <small>.doc &rarr; .docx<br>LibreOffice / COM</small>
-      </div>
-    </div>
-
-    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
-
-    <!-- Split: Rule-Based vs LLM -->
-    <div class="flow-split">
-      <div class="flow-branch">
-        <span class="flow-branch-label" style="background:rgba(56,189,248,0.15); color:var(--accent);">Path A: Rule-Based</span>
-        <div class="flow-node blue">&#x1F9E9; Plugin Registry<small>registry.py</small></div>
-        <span class="flow-arrow down">&#x25BC;</span>
-        <div class="flow-node blue">&#x1F527; TranscriptCleaner<small>cleaner.py &bull; Profiles</small></div>
-        <span class="flow-arrow down">&#x25BC;</span>
-        <div class="flow-node blue" style="min-width:200px;">
-          &#x1F50C; 9 Processor Plugins
-          <small>seif, title, brackets, editorial...</small>
+    <div class="flow-split" style="margin-top:0.5rem;">
+      <div class="flow-branch" style="border-color:var(--accent);">
+        <span class="flow-branch-label" style="background:rgba(56,189,248,0.15); color:var(--accent);">Static Assets</span>
+        <div class="flow-node blue">
+          &#x1F4C4; index.html
+          <small>Single-page app, 556 lines<br>Dark theme, vanilla JS, RTL</small>
         </div>
-        <span class="flow-arrow down">&#x25BC;</span>
-        <div class="flow-node green">&#x1F4CA; Clean Rate Score<small>clean_rate.py &bull; 0-100</small></div>
       </div>
-
-      <div class="flow-branch">
-        <span class="flow-branch-label" style="background:rgba(244,114,182,0.15); color:var(--pink);">Path B: LLM-Based</span>
-        <div class="flow-node pink">&#x1F916; LLM Processor<small>llm_processor.py</small></div>
-        <span class="flow-arrow down">&#x25BC;</span>
-        <div class="flow-node pink" style="min-width:200px;">
-          &#x1F310; Provider APIs
-          <small>OpenAI &bull; Anthropic &bull; Google<br>Groq &bull; OpenRouter &bull; Ollama</small>
+      <div class="flow-branch" style="border-color:var(--teal);">
+        <span class="flow-branch-label" style="background:rgba(45,212,191,0.15); color:var(--teal);">Pages Function</span>
+        <div class="flow-node teal">
+          &#x2699;&#xFE0F; /api/align.js
+          <small>Proxies to RunPod API<br>Hides API key server-side</small>
         </div>
-        <span class="flow-arrow down">&#x25BC;</span>
-        <div class="flow-node green">&#x1F4DD; Diff Generation<small>diff_utils.py</small></div>
       </div>
     </div>
 
-    <div class="flow-row" style="margin-top:1rem;"><span class="flow-arrow down">&#x25BC;</span></div>
+    <div class="flow-row"><span class="flow-arrow" style="transform:rotate(90deg)">&#x25B6;</span></div>
+
+    <!-- RunPod -->
+    <div style="text-align:center; margin-top:0.3rem;">
+      <span class="flow-branch-label" style="background:rgba(251,146,60,0.15); color:var(--orange);">GPU Compute</span>
+    </div>
+    <div class="flow-row">
+      <div class="flow-node orange" style="min-width:400px; text-align:left; padding:1rem 1.5rem;">
+        <strong>&#x1F680; RunPod Serverless</strong>
+        <small style="display:block; margin-top:0.5rem; line-height:1.8;">
+          &#x2022; Docker: pytorch 2.4.1 + CUDA 12.1 + cuDNN 9<br>
+          &#x2022; GPU: AMPERE 16GB (A4000 / L4 / A100)<br>
+          &#x2022; Model: yi-whisper-large-v3-turbo-ct2 (~1.5GB, baked in)<br>
+          &#x2022; Handler: handler.py (transcribe + align modes)<br>
+          &#x2022; Scale: 0 min workers, 1 max (scale-to-zero)
+        </small>
+      </div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow" style="transform:rotate(90deg)">&#x25B6;</span></div>
 
     <!-- Output -->
     <div style="text-align:center; margin-top:0.3rem;">
       <span class="flow-branch-label" style="background:rgba(74,222,128,0.15); color:var(--green);">Output</span>
     </div>
     <div class="flow-row">
-      <div class="flow-node green">&#x1F4C4; .docx<small>RTL, formatted</small></div>
-      <div class="flow-node green">&#x1F4DD; .txt<small>Plain UTF-8</small></div>
-      <div class="flow-node green">&#x1F4CA; Stats & Diff<small>Before/after view</small></div>
-      <div class="flow-node green">&#x1F517; Google Drive<small>Uploaded result</small></div>
+      <div class="flow-node green">&#x1F4AC; Word Timestamps<small>start, end, confidence</small></div>
+      <div class="flow-node green">&#x1F3B5; Karaoke Playback<small>Click word &rarr; play audio</small></div>
+      <div class="flow-node green">&#x1F4CB; Segments JSON<small>Download raw data</small></div>
     </div>
+  </div>
+
+  <!-- Alternative: Flask local -->
+  <div class="card" style="margin-top:1.5rem; border-color:var(--accent2);">
+    <h3 style="color:var(--accent2);">&#x1F527; Alternative: Flask Local Mode</h3>
+    <p>The alignment can also run locally via the Flask Blueprint (<code>blueprints/alignment_bp.py</code>). If <code>RUNPOD_ENDPOINT_ID</code> is not set, it falls back to running the alignment on the local machine (CPU &mdash; much slower). If set, it proxies to RunPod just like the Cloudflare function.</p>
   </div>
 </section>
 
 <div class="section-sep"></div>
 
-<!-- 3. PROCESSING PIPELINE -->
-<section id="pipeline" class="fade-in">
-  <h2><span class="num">3</span> Processing Pipeline</h2>
-  <p class="subtitle">The 9 processor plugins that form the rule-based cleaning chain</p>
+<!-- 3. CORE ALGORITHM -->
+<section id="algorithm" class="fade-in">
+  <h2><span class="num">3</span> Confusion-Aware Alignment Algorithm</h2>
+  <p class="subtitle">The heart of the system &mdash; how audio and text are aligned with high accuracy</p>
 
-  <div class="card-grid cols-2" style="margin-bottom:2rem;">
-    <div>
-      <div class="pipeline">
-        <div class="pipeline-step">
-          <div class="pipeline-dot" style="border-color:var(--accent); background:var(--accent);"></div>
-          <div class="pipeline-content">
-            <h4>1. Special Characters</h4>
-            <p>Removes invisible Unicode: zero-width spaces, BOM markers, LTR/RTL directional marks</p>
-          </div>
-        </div>
-        <div class="pipeline-step">
-          <div class="pipeline-dot" style="border-color:var(--accent); background:var(--accent);"></div>
-          <div class="pipeline-content">
-            <h4>2. Whitespace Normalization</h4>
-            <p>Collapses multiple spaces, strips whitespace around newlines</p>
-          </div>
-        </div>
-        <div class="pipeline-step">
-          <div class="pipeline-dot" style="border-color:var(--orange); background:var(--orange);"></div>
-          <div class="pipeline-content">
-            <h4>3. Seif Markers</h4>
-            <p>Removes Hebrew gematria section numbering (e.g., <code style="color:var(--yellow)">&#x05D0;.</code>, <code style="color:var(--yellow)">&#x05D9;&#x05D1;*.</code>). Uses gematria validation: checks descending numeric values of Hebrew letters</p>
-          </div>
-        </div>
-        <div class="pipeline-step">
-          <div class="pipeline-dot" style="border-color:var(--pink); background:var(--pink);"></div>
-          <div class="pipeline-content">
-            <h4>4. Title/Style Detection</h4>
-            <p>Multi-signal: Word heading styles, short paragraphs (&lt;5 words), large font (&gt;1.2x average), all-bold short paragraphs. Respects exception patterns</p>
-          </div>
-        </div>
-        <div class="pipeline-step">
-          <div class="pipeline-dot" style="border-color:var(--accent2); background:var(--accent2);"></div>
-          <div class="pipeline-content">
-            <h4>5. Inline Brackets</h4>
-            <p>Removes <code>[editorial notes]</code> inline but preserves <code>[entire paragraphs in brackets]</code> (treated as spoken content)</p>
-          </div>
-        </div>
+  <div class="card-grid cols-2" style="margin-bottom:1.5rem;">
+    <div class="algo-box">
+      <h3 style="color:var(--accent);">&#x1F9E0; Main Loop <span style="font-weight:400; font-size:0.8rem; color:var(--text-dim);">(alignment/align.py)</span></h3>
+      <div class="algo-step">
+        <div class="num" style="background:rgba(56,189,248,0.15); color:var(--accent);">1</div>
+        <p><strong>Initialize</strong> &mdash; Create a <code>WhisperResult</code> from the transcript text. Set <code>slice_start = 0</code>.</p>
+      </div>
+      <div class="algo-step">
+        <div class="num" style="background:rgba(56,189,248,0.15); color:var(--accent);">2</div>
+        <p><strong>Load audio slice</strong> &mdash; Use <code>SeekableAudioLoader</code> to load audio from <code>slice_start</code> onward via <code>ffmpeg -ss</code> fast seeking.</p>
+      </div>
+      <div class="algo-step">
+        <div class="num" style="background:rgba(56,189,248,0.15); color:var(--accent);">3</div>
+        <p><strong>Align</strong> &mdash; Run <code>model.align(audio, text_slice, language="yi")</code> using the <code>BreakableAligner</code> which monitors quality in real-time.</p>
+      </div>
+      <div class="algo-step">
+        <div class="num" style="background:rgba(251,146,60,0.15); color:var(--orange);">4</div>
+        <p><strong>Detect confusion</strong> &mdash; Call <code>get_confusion_zone()</code>: sliding window (120s window, 30s hop) checks the ratio of low-confidence to high-confidence word durations.</p>
+      </div>
+      <div class="algo-step">
+        <div class="num" style="background:rgba(74,222,128,0.15); color:var(--green);">5a</div>
+        <p><strong>No confusion?</strong> &mdash; Alignment is complete. Break and stitch all segments.</p>
+      </div>
+      <div class="algo-step">
+        <div class="num" style="background:rgba(248,113,113,0.15); color:var(--red);">5b</div>
+        <p><strong>Confusion found?</strong> &mdash; Find a high-confidence segment <em>before</em> the confusion zone (<code>find_probable_segment_before_time()</code>, avg word prob &ge; 0.8). Save segments up to that point. Retry alignment from there (up to 2 retries). If retries fail: skip the confusion zone, align skipped text to skipped audio, and continue after.</p>
+      </div>
+      <div class="algo-step">
+        <div class="num" style="background:rgba(129,140,248,0.15); color:var(--accent2);">6</div>
+        <p><strong>Stitch</strong> &mdash; Combine all aligned pieces into a final <code>WhisperResult</code> with continuous timestamps.</p>
       </div>
     </div>
+
     <div>
-      <div class="pipeline">
-        <div class="pipeline-step">
-          <div class="pipeline-dot" style="border-color:var(--text-dim);"></div>
-          <div class="pipeline-content">
-            <h4>6. Parentheses Notes <span style="color:var(--red); font-size:0.75rem;">(OFF by default)</span></h4>
-            <p>Removes non-speech (parenthetical) content. Disabled by default since parenthetical remarks are often spoken</p>
-          </div>
-        </div>
-        <div class="pipeline-step">
-          <div class="pipeline-dot" style="border-color:var(--teal); background:var(--teal);"></div>
-          <div class="pipeline-content">
-            <h4>7. Editorial Hebrew</h4>
-            <p>35+ regex patterns matching cross-references, position markers, source citations, editor notes</p>
-          </div>
-        </div>
-        <div class="pipeline-step">
-          <div class="pipeline-dot" style="border-color:var(--red); background:var(--red);"></div>
-          <div class="pipeline-content">
-            <h4>8. Force Remove</h4>
-            <p>Force-removes paragraphs containing specific blocked patterns (e.g., <code style="color:var(--yellow)">&#x05D1;&#x05E1;"&#x05D3;</code>)</p>
-          </div>
-        </div>
-        <div class="pipeline-step">
-          <div class="pipeline-dot" style="border-color:var(--yellow); background:var(--yellow);"></div>
-          <div class="pipeline-content">
-            <h4>9. Regex Processor</h4>
-            <p>Generic regex-based removal with configurable exception patterns for custom rules</p>
-          </div>
+      <div class="algo-box">
+        <h3 style="color:var(--orange);">&#x1F50D; Confusion Detection <span style="font-weight:400; font-size:0.8rem; color:var(--text-dim);">(alignment/utils.py)</span></h3>
+        <div class="algo-step">
+          <div class="num" style="background:rgba(251,146,60,0.15); color:var(--orange);">&#x21C6;</div>
+          <p>Sliding window: <strong>120s window</strong>, <strong>30s hop</strong>. For each window, count durations of "bad" words (prob &lt; 0.4) vs "good" words (prob &ge; 0.4). When <code>bad/good ratio &gt; 0.8</code>, that window is a confusion zone.</p>
         </div>
       </div>
 
-      <div class="card" style="margin-top:1.5rem; border-color:var(--accent2);">
-        <h3 style="color:var(--accent2);">&#x1F9E9; Plugin Registry Pattern</h3>
-        <p>Each processor auto-registers via the <code>@ProcessorRegistry.register</code> decorator. Adding a new processor requires only:</p>
-        <ol style="color:var(--text-dim); font-size:0.85rem; padding-left:1.2rem; margin-top:0.5rem;">
-          <li>Create a file in <code>processors/</code></li>
-          <li>Extend <code>BaseProcessor</code></li>
-          <li>Implement <code>process(text, context)</code></li>
-          <li>Return <code>(cleaned_text, removed_items)</code></li>
-        </ol>
+      <div class="algo-box">
+        <h3 style="color:var(--pink);">&#x1F6D1; BreakableAligner <span style="font-weight:400; font-size:0.8rem; color:var(--text-dim);">(alignment/breakable_aligner.py)</span></h3>
+        <div class="algo-step">
+          <div class="num" style="background:rgba(244,114,182,0.15); color:var(--pink);">!</div>
+          <p>Subclass of stable-ts <code>Aligner</code> that monitors quality during alignment. Breaks early when:</p>
+        </div>
+        <ul style="padding-left:3rem; color:var(--text-dim); font-size:0.85rem;">
+          <li>&#x2022; Bad-to-good word ratio exceeds 0.8 in a 120s sliding window</li>
+          <li>&#x2022; No high-confidence ("committed") word appears for 60 seconds</li>
+        </ul>
+      </div>
+
+      <div class="algo-box">
+        <h3 style="color:var(--teal);">&#x23E9; SeekableAudioLoader <span style="font-weight:400; font-size:0.8rem; color:var(--text-dim);">(alignment/seekable_audio_loader.py)</span></h3>
+        <div class="algo-step">
+          <div class="num" style="background:rgba(45,212,191,0.15); color:var(--teal);">&#x25B6;</div>
+          <p>Extends stable-ts <code>AudioLoader</code> to inject <code>-ss {start_time}</code> into the ffmpeg command. Enables fast seeking to any position in long audio files &mdash; critical for the retry loop.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem; border-color:var(--yellow);">
+        <h3 style="color:var(--yellow);">&#x1F4CA; Confidence Color-Coding</h3>
+        <p style="margin-bottom:0.5rem;">Words in the output are color-coded by confidence:</p>
+        <div class="conf-bar">
+          <div style="flex:5; background:rgba(74,222,128,0.3); color:var(--green); border: 1px solid var(--green);">&#x2265; 0.5 (High)</div>
+          <div style="flex:3; background:rgba(251,191,36,0.3); color:var(--yellow); border: 1px solid var(--yellow);">&#x2265; 0.2 (Medium)</div>
+          <div style="flex:2; background:rgba(248,113,113,0.3); color:var(--red); border: 1px solid var(--red);">&lt; 0.2 (Low)</div>
+        </div>
       </div>
     </div>
+  </div>
+
+  <!-- Visual demo of word chips -->
+  <div class="card">
+    <h3>&#x1F3AF; Example Output: Word Chips with Confidence</h3>
+    <p>Each word is a clickable chip. Click to jump audio to that timestamp. Words highlight during karaoke playback.</p>
+    <div class="word-chips" id="demo-chips">
+      <span class="word-chip high" data-t="0.00">&#x05D5;&#x05D5;&#x05D0;&#x05E1;</span>
+      <span class="word-chip high" data-t="0.28">&#x05D0;&#x05D9;&#x05D6;</span>
+      <span class="word-chip high" data-t="0.44">&#x05D3;&#x05E2;&#x05E8;</span>
+      <span class="word-chip high" data-t="0.64">&#x05E2;&#x05E0;&#x05D9;&#x05DF;</span>
+      <span class="word-chip high" data-t="0.96">&#x05E4;&#x05D5;&#x05DF;</span>
+      <span class="word-chip high" data-t="1.20">&#x05D3;&#x05E2;&#x05DD;</span>
+      <span class="word-chip med" data-t="1.48">&#x05DE;&#x05D0;&#x05DE;&#x05E8;</span>
+      <span class="word-chip high" data-t="1.84">&#x05D0;&#x05D9;&#x05DF;</span>
+      <span class="word-chip high" data-t="2.04">&#x05D3;&#x05E2;&#x05E8;</span>
+      <span class="word-chip low" data-t="2.28">&#x05D2;&#x05DE;&#x05E8;&#x05D0;</span>
+      <span class="word-chip high" data-t="2.60">&#x05D5;&#x05D5;&#x05D0;&#x05E1;</span>
+      <span class="word-chip med" data-t="2.88">&#x05E2;&#x05E1;</span>
+      <span class="word-chip high" data-t="3.12">&#x05E9;&#x05D8;&#x05D9;&#x05D9;&#x05D8;</span>
+    </div>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin-top:0.5rem;"><span style="color:var(--green);">&#x25CF;</span> High confidence &nbsp; <span style="color:var(--yellow);">&#x25CF;</span> Medium &nbsp; <span style="color:var(--red);">&#x25CF;</span> Low confidence</p>
   </div>
 </section>
 
 <div class="section-sep"></div>
 
-<!-- 4. DATA FLOW -->
-<section id="data-flow" class="fade-in">
-  <h2><span class="num">4</span> Data Flow</h2>
-  <p class="subtitle">Detailed flow from input documents through processing to output</p>
+<!-- 4. DEPLOYMENT INFRASTRUCTURE -->
+<section id="deployment" class="fade-in">
+  <h2><span class="num">4</span> Deployment Infrastructure</h2>
+  <p class="subtitle">Three-tier architecture with scale-to-zero GPU compute</p>
 
-  <div class="flow-container" style="margin-bottom:1.5rem;">
-    <h3 style="text-align:center; margin-bottom:1rem; color:var(--accent);">Document Processing Data Flow</h3>
-
-    <div class="flow-row">
-      <div class="flow-node blue">&#x1F4C4; Word Document<small>.doc or .docx</small></div>
-      <span class="flow-arrow">&#x25B6;</span>
-      <div class="flow-node yellow">&#x1F504; Format Check<small>.doc? Convert via LibreOffice</small></div>
-      <span class="flow-arrow">&#x25B6;</span>
-      <div class="flow-node teal">&#x1F50D; python-docx Parse<small>XML &rarr; Paragraphs</small></div>
+  <div class="infra-layer">
+    <div class="infra-box" style="border-color:var(--accent2);">
+      <h4 style="color:var(--accent2);">&#x1F9D1; User Browser</h4>
+      <p>Vanilla HTML/CSS/JS SPA<br>Drag &amp; drop audio<br>RTL text input<br>Karaoke playback</p>
     </div>
-
-    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
-
-    <div class="flow-row">
-      <div class="flow-node purple" style="min-width:500px; text-align:left; padding:1rem 1.5rem;">
-        <strong>&#x1F4CB; Paragraph Metadata Extraction</strong><br>
-        <small style="display:block; margin-top:0.5rem; line-height:1.8;">
-          &bull; Text content (original + current)<br>
-          &bull; Style name (Normal, Heading 1, etc.)<br>
-          &bull; Font size (calculated from runs &rarr; styles &rarr; document defaults)<br>
-          &bull; Bold status, heading detection<br>
-          &bull; Word/character counts, start/end positions<br>
-          &bull; Text box content (XPath extraction &amp; merge)<br>
-          &bull; Run-level formatting (per text run: bold, italic, font, color)
-        </small>
-      </div>
+    <div class="infra-connector">&#x27A1;&#xFE0F;</div>
+    <div class="infra-box" style="border-color:var(--accent);">
+      <h4 style="color:var(--accent);">&#x2601;&#xFE0F; Cloudflare Pages</h4>
+      <p><strong>align.kohnai.ai</strong><br>Static hosting + Pages Function<br>API key hidden server-side</p>
+      <span class="tag" style="background:rgba(56,189,248,0.15); color:var(--accent);">Free tier</span>
     </div>
-
-    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
-
-    <div class="flow-row">
-      <div class="flow-node orange" style="min-width:500px; text-align:left; padding:1rem 1.5rem;">
-        <strong>&#x1F504; Context Object (Shared Mutable State)</strong><br>
-        <small style="display:block; margin-top:0.5rem;">
-          <code style="font-size:0.75rem;">{ paragraphs: [{text, style, font_size, is_bold, runs, ...}], ... }</code><br>
-          Passed to each processor &mdash; processors read AND mutate this context
-        </small>
-      </div>
-    </div>
-
-    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
-
-    <div class="flow-row">
-      <div class="flow-node blue">&#x1F527; Processor 1<small>Modifies text &amp; context</small></div>
-      <span class="flow-arrow">&#x25B6;</span>
-      <div class="flow-node blue">&#x1F527; Processor 2<small>Reads updated context</small></div>
-      <span class="flow-arrow">&#x25B6;</span>
-      <div class="flow-node blue">&#x1F527; ...</small></div>
-      <span class="flow-arrow">&#x25B6;</span>
-      <div class="flow-node blue">&#x1F527; Processor N<small>Final pass</small></div>
-    </div>
-
-    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
-
-    <div class="flow-row">
-      <div class="flow-node green">&#x2705; Cleaned Text<small>Pure spoken content</small></div>
-      <span class="flow-arrow">&#x25B6;</span>
-      <div class="flow-node green">&#x1F4CA; Clean Rate<small>Confidence score 0-100</small></div>
-      <span class="flow-arrow">&#x25B6;</span>
-      <div class="flow-node green">&#x1F4DD; Removed Items<small>Audit trail</small></div>
+    <div class="infra-connector">&#x27A1;&#xFE0F;</div>
+    <div class="infra-box" style="border-color:var(--orange);">
+      <h4 style="color:var(--orange);">&#x1F680; RunPod Serverless</h4>
+      <p>CUDA 12.1 + PyTorch 2.4.1<br>AMPERE 16GB GPU<br>yi-whisper model baked in</p>
+      <span class="tag" style="background:rgba(251,146,60,0.15); color:var(--orange);">Pay-per-second</span>
     </div>
   </div>
 
-  <div class="card-grid cols-3">
+  <div class="card-grid cols-2" style="margin-top:1.5rem;">
     <div class="card">
-      <h3 style="color:var(--accent);">&#x1F4E5; Input Formats</h3>
-      <ul>
-        <li style="color:var(--text)">&#x2022; <code>.doc</code> (legacy Word)</li>
-        <li style="color:var(--text)">&#x2022; <code>.docx</code> (modern Word)</li>
-        <li style="color:var(--text)">&#x2022; Google Docs (exported as .docx)</li>
-      </ul>
+      <h3 style="color:var(--orange);">&#x1F433; Docker Image</h3>
+      <div class="code-block">
+<span class="kw">FROM</span> pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
+
+<span class="cmt"># Install ffmpeg + Python deps</span>
+<span class="kw">RUN</span> apt-get install ffmpeg
+<span class="kw">RUN</span> pip install stable-ts faster-whisper runpod
+
+<span class="cmt"># Bake model into image (~1.5GB)</span>
+<span class="kw">RUN</span> python -c <span class="str">"import stable_whisper; \
+    stable_whisper.load_faster_whisper( \
+    'ivrit-ai/yi-whisper-large-v3-turbo-ct2')"</span>
+
+<span class="kw">CMD</span> [<span class="str">"python"</span>, <span class="str">"-u"</span>, <span class="str">"handler.py"</span>]
+      </div>
     </div>
     <div class="card">
-      <h3 style="color:var(--green);">&#x1F4E4; Output Formats</h3>
-      <ul>
-        <li style="color:var(--text)">&#x2022; <code>.docx</code> with RTL + formatting</li>
-        <li style="color:var(--text)">&#x2022; <code>.txt</code> plain UTF-8</li>
-        <li style="color:var(--text)">&#x2022; JSON response with stats</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h3 style="color:var(--orange);">&#x1F504; Conversion Chain</h3>
-      <ul>
-        <li style="color:var(--text)">&#x2022; Linux/Mac: LibreOffice headless</li>
-        <li style="color:var(--text)">&#x2022; Windows: pywin32 COM</li>
-        <li style="color:var(--text)">&#x2022; Auto-detection of platform</li>
-      </ul>
+      <h3 style="color:var(--accent);">&#x23F1;&#xFE0F; Performance</h3>
+      <table style="width:100%; font-size:0.85rem; margin-top:0.5rem;">
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:0.5rem 0; font-weight:600;">Cold start</td>
+          <td style="padding:0.5rem 0; color:var(--red);">~2.5 minutes</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:0.5rem 0; font-weight:600;">Model load (first request)</td>
+          <td style="padding:0.5rem 0; color:var(--yellow);">~6 seconds</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:0.5rem 0; font-weight:600;">Warm alignment</td>
+          <td style="padding:0.5rem 0; color:var(--green);">0.5 &ndash; 1 second</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:0.5rem 0; font-weight:600;">Warm transcription</td>
+          <td style="padding:0.5rem 0; color:var(--green);">7 &ndash; 8 seconds</td>
+        </tr>
+        <tr>
+          <td style="padding:0.5rem 0; font-weight:600;">Idle timeout</td>
+          <td style="padding:0.5rem 0;">10 seconds &rarr; scale to 0</td>
+        </tr>
+      </table>
     </div>
   </div>
 </section>
@@ -644,173 +665,148 @@
 <!-- 5. USER JOURNEYS -->
 <section id="journeys" class="fade-in">
   <h2><span class="num">5</span> User Journeys</h2>
-  <p class="subtitle">Four distinct workflows for different use cases</p>
+  <p class="subtitle">Three ways to use the alignment system</p>
 
   <div class="journey-tabs">
-    <div class="journey-tab active" onclick="switchJourney(0)">&#x1F4C4; Single File (Rules)</div>
-    <div class="journey-tab" onclick="switchJourney(1)">&#x1F916; Single File (LLM)</div>
-    <div class="journey-tab" onclick="switchJourney(2)">&#x1F4C1; Google Drive</div>
-    <div class="journey-tab" onclick="switchJourney(3)">&#x1F4CA; Google Sheets Batch</div>
+    <div class="journey-tab active" onclick="switchJourney(0)">&#x1F3A4; Align (Web UI)</div>
+    <div class="journey-tab" onclick="switchJourney(1)">&#x1F4DD; Transcribe (Web UI)</div>
+    <div class="journey-tab" onclick="switchJourney(2)">&#x1F4BB; Python Client</div>
   </div>
 
-  <!-- Journey 1: Single File Rule-Based -->
+  <!-- Journey 1: Align via Web UI -->
   <div class="journey-panel active" id="journey-0">
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-body">
-          <h4>Open Application</h4>
-          <p>User navigates to <code>http://localhost:5050</code>. The single-page app loads with tab navigation.</p>
+          <h4>Open align.kohnai.ai</h4>
+          <p>The web app loads in dark mode. "Align Text" mode is selected by default.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-body">
-          <h4>Configure Processors</h4>
-          <p>Select a cleaning profile (preset combination) or toggle individual processor plugins on/off. Each processor has a description and can be independently enabled.</p>
+          <h4>Upload Audio</h4>
+          <p>Drag & drop or browse for an audio file (MP3, WAV, M4A, OGG, FLAC). The file is read as base64 in the browser.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-body">
-          <h4>Upload Document</h4>
-          <p>Drag & drop or browse for a <code>.doc</code> / <code>.docx</code> file. Maximum size: 16MB.</p>
+          <h4>Paste Transcript</h4>
+          <p>Paste the Yiddish transcript into the RTL text area. This is the text that will be aligned to the audio.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">4</div>
         <div class="step-body">
-          <h4>Processing</h4>
-          <p>Flask API receives file &rarr; converts if needed &rarr; parses Word XML &rarr; extracts paragraph metadata &rarr; runs each processor in sequence &rarr; calculates clean rate score.</p>
+          <h4>Click "Start Alignment"</h4>
+          <p>Browser sends <code>POST /api/align</code> with <code>{mode: "align", audio_base64, text, language: "yi"}</code>. The Cloudflare Pages Function proxies to RunPod.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">5</div>
         <div class="step-body">
-          <h4>Review Results</h4>
-          <p>View original vs cleaned text side-by-side, diff view highlighting removals, statistics (word count, removal count), clean rate confidence score, and audit trail of what was removed and why.</p>
+          <h4>GPU Processing</h4>
+          <p>RunPod handler decodes audio, loads yi-whisper model (cached after first request), runs the confusion-aware alignment loop. Returns JSON with word-level timestamps.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">6</div>
         <div class="step-body">
-          <h4>Download</h4>
-          <p>Download cleaned document as <code>.docx</code> (with RTL formatting preserved) or <code>.txt</code> (plain UTF-8).</p>
+          <h4>View Results</h4>
+          <p>Three result tabs appear:</p>
+          <ul style="margin-top:0.3rem;">
+            <li>&#x2022; <strong>Words</strong> &mdash; Clickable RTL word chips, color-coded by confidence (green/yellow/red)</li>
+            <li>&#x2022; <strong>Segments</strong> &mdash; Table with start time, end time, and text per segment</li>
+            <li>&#x2022; <strong>JSON</strong> &mdash; Raw output with download button</li>
+          </ul>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <h4>Karaoke Playback</h4>
+          <p>Click any word chip to jump the audio player to that timestamp. During playback, words highlight in real-time (via <code>timeupdate</code> event), creating a karaoke-style follow-along experience.</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Journey 2: LLM Mode -->
+  <!-- Journey 2: Transcribe via Web UI -->
   <div class="journey-panel" id="journey-1">
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-body">
-          <h4>Enable LLM Mode</h4>
-          <p>Toggle the "LLM Mode" switch in the UI. A new configuration panel appears.</p>
+          <h4>Switch to "Transcribe Only" Mode</h4>
+          <p>Toggle the mode switch. The text input area disappears &mdash; only audio is needed.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-body">
-          <h4>Configure Provider</h4>
-          <p>Select an LLM provider: <strong>OpenAI</strong>, <strong>Anthropic</strong>, <strong>Google Gemini</strong>, <strong>Groq</strong>, <strong>OpenRouter</strong>, or <strong>Ollama</strong> (local). Enter API key (not needed for Ollama). Select model from the provider's available models.</p>
+          <h4>Upload Audio</h4>
+          <p>Same as alignment mode &mdash; drag & drop an audio file.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-body">
-          <h4>Customize Prompt (Optional)</h4>
-          <p>Edit the default prompt template. Uses <code>{document_text}</code> placeholder. The prompt instructs the AI to use contextual understanding, not formatting rules, to identify non-speech content.</p>
+          <h4>Click "Start Transcription"</h4>
+          <p>Sends <code>{mode: "transcribe"}</code>. RunPod runs <code>model.transcribe(audio, language="yi", vad=True)</code> (with voice activity detection).</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">4</div>
         <div class="step-body">
-          <h4>Upload & Process</h4>
-          <p>Upload file &rarr; text extracted &rarr; sent to LLM provider API (temperature=0.1 for consistency) &rarr; AI returns cleaned text.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">5</div>
-        <div class="step-body">
-          <h4>Review Diff</h4>
-          <p>Line-by-line and word-by-word diff generated between original and AI-cleaned text. Clean rate automatically set to 100 (AI is trusted).</p>
+          <h4>View Results</h4>
+          <p>Same three-tab output: generated transcript text with word timestamps, segments, and downloadable JSON.</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Journey 3: Google Drive -->
+  <!-- Journey 3: Python Client -->
   <div class="journey-panel" id="journey-2">
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-body">
-          <h4>Paste Drive URL</h4>
-          <p>Navigate to the Google Drive tab and paste a Google Drive file or folder URL. The system auto-detects whether it's a single file or a folder.</p>
+          <h4>Import Client</h4>
+          <div class="code-block" style="margin-top:0.5rem;">
+<span class="kw">from</span> runpod_client <span class="kw">import</span> <span class="fn">RunPodAlignmentClient</span>
+client = <span class="fn">RunPodAlignmentClient</span>()  <span class="cmt"># reads RUNPOD_* from env</span>
+          </div>
         </div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-body">
-          <h4>Google Drive API Authentication</h4>
-          <p>Uses OAuth 2.0 credentials (<code>credentials.json</code> + <code>token.json</code>). Scopes: <code>drive.readonly</code> for downloading, <code>drive</code> for upload.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <h4>Download Documents</h4>
-          <p>If folder: recursively lists all documents. Google Docs exported as <code>.docx</code>. Native <code>.doc/.docx</code> files downloaded directly. Saved to <code>temp/</code> directory.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-body">
-          <h4>Batch Processing</h4>
-          <p>Each downloaded file processed through the same rule-based or LLM pipeline. Results aggregated into a JSON array response.</p>
-        </div>
-      </div>
-    </div>
-  </div>
+          <h4>Call Align or Transcribe</h4>
+          <div class="code-block" style="margin-top:0.5rem;">
+<span class="cmt"># Align (audio URL + text)</span>
+result = client.<span class="fn">align</span>(
+    audio_url=<span class="str">"https://example.com/shiur.mp3"</span>,
+    text=<span class="str">"&#x05D3;&#x05E2;&#x05E8; &#x05E2;&#x05E0;&#x05D9;&#x05DF; &#x05E4;&#x05D5;&#x05DF; &#x05D3;&#x05E2;&#x05DD; &#x05DE;&#x05D0;&#x05DE;&#x05E8;..."</span>,
+    language=<span class="str">"yi"</span>
+)
 
-  <!-- Journey 4: Google Sheets -->
-  <div class="journey-panel" id="journey-3">
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <h4>Paste Sheet URL</h4>
-          <p>Paste a Google Sheet URL containing a "Doc Link" column with Google Drive links to source documents. Optionally provide an output folder URL for cleaned files.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <h4>Preview & Session Setup</h4>
-          <p>System reads the sheet, identifies required columns (Doc Link, Clean Rate, Cleaned Link, Status, Session ID, Processed At). Creates/finds columns as needed. Returns file list preview. Generates a unique session ID.</p>
+<span class="cmt"># Transcribe (audio only)</span>
+result = client.<span class="fn">transcribe</span>(
+    audio_url=<span class="str">"https://example.com/shiur.mp3"</span>
+)
+          </div>
         </div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-body">
-          <h4>Sequential File Processing</h4>
-          <p>Each file processed one-by-one via the frontend. For each file:</p>
-          <ul style="margin-top:0.3rem;">
-            <li>&#x2022; Sheet row updated: Status = "Processing"</li>
-            <li>&#x2022; Document downloaded from Drive</li>
-            <li>&#x2022; Processed through cleaning pipeline</li>
-            <li>&#x2022; Cleaned <code>.txt</code> uploaded to output folder</li>
-          </ul>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-body">
-          <h4>Sheet Updated in Real-Time</h4>
-          <p>Each row updated upon completion: <strong>Clean Rate</strong> (0-100), <strong>Cleaned Link</strong> (Drive URL), <strong>Status</strong> ("Completed"/"Failed"), <strong>Session ID</strong>, <strong>Processed At</strong> timestamp. Already-completed rows are skipped.</p>
+          <h4>Use Results</h4>
+          <div class="code-block" style="margin-top:0.5rem;">
+<span class="kw">for</span> word <span class="kw">in</span> result[<span class="str">"timestamps"</span>]:
+    <span class="fn">print</span>(f<span class="str">"{word['start']:.2f}s - {word['end']:.2f}s: {word['text']} ({word['confidence']:.2f})"</span>)
+          </div>
         </div>
       </div>
     </div>
@@ -819,98 +815,155 @@
 
 <div class="section-sep"></div>
 
-<!-- 6. API ENDPOINTS -->
+<!-- 6. API REFERENCE -->
 <section id="api" class="fade-in">
   <h2><span class="num">6</span> API Endpoints</h2>
-  <p class="subtitle">All 16 Flask HTTP endpoints</p>
+  <p class="subtitle">All HTTP endpoints across both deployment modes</p>
 
-  <table class="data-table">
-    <thead>
-      <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
-    </thead>
+  <h3 style="color:var(--accent); margin-bottom:0.8rem;">Cloudflare Pages (Production)</h3>
+  <table class="data-table" style="margin-bottom:1.5rem;">
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
     <tbody>
-      <tr><td><span class="method-badge get">GET</span></td><td><code>/</code></td><td>Serve the web UI (index.html)</td></tr>
-      <tr><td><span class="method-badge get">GET</span></td><td><code>/health</code></td><td>Health check &mdash; <code>{"status": "healthy"}</code></td></tr>
-      <tr><td><span class="method-badge get">GET</span></td><td><code>/processors</code></td><td>List all registered processor plugins</td></tr>
-      <tr><td><span class="method-badge get">GET</span></td><td><code>/profiles</code></td><td>List available cleaning profiles</td></tr>
-      <tr><td><span class="method-badge get">GET</span></td><td><code>/formats</code></td><td>List output format writers (docx, txt)</td></tr>
-      <tr><td><span class="method-badge get">GET</span></td><td><code>/llm-providers</code></td><td>List LLM providers and their models</td></tr>
-      <tr><td><span class="method-badge get">GET</span></td><td><code>/llm-prompt</code></td><td>Get default LLM prompt template</td></tr>
-      <tr><td><span class="method-badge post">POST</span></td><td><code>/upload</code></td><td>Process single file (rule-based)</td></tr>
-      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-drive</code></td><td>Process Google Drive files/folders (rule-based)</td></tr>
-      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-sheet-preview</code></td><td>Preview file list from Google Sheet</td></tr>
-      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-sheet-file</code></td><td>Process single sheet file (rule-based)</td></tr>
-      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-llm</code></td><td>Process single file with LLM</td></tr>
-      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-drive-llm</code></td><td>Process Drive files with LLM</td></tr>
-      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-sheet-llm-preview</code></td><td>Preview sheet for LLM processing</td></tr>
-      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-sheet-llm-file</code></td><td>Process single sheet file with LLM</td></tr>
-      <tr><td><span class="method-badge post">POST</span></td><td><code>/download-cleaned</code></td><td>Generate & download cleaned document</td></tr>
+      <tr>
+        <td><span class="method-badge post">POST</span></td>
+        <td><code>https://align.kohnai.ai/api/align</code></td>
+        <td>Align or transcribe audio. Proxies to RunPod with API key from env secrets.</td>
+      </tr>
     </tbody>
   </table>
-</section>
 
-<div class="section-sep"></div>
-
-<!-- 7. CLEAN RATE SCORING -->
-<section id="scoring" class="fade-in">
-  <h2><span class="num">7</span> Quality Scoring System</h2>
-  <p class="subtitle">How the clean rate confidence score works</p>
+  <h3 style="color:var(--accent2); margin-bottom:0.8rem;">Flask Blueprint (Development / Local)</h3>
+  <table class="data-table" style="margin-bottom:1.5rem;">
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/api/alignment/align</code></td><td>Align audio to transcript (RunPod or local GPU/CPU)</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/api/alignment/transcribe</code></td><td>Transcribe audio (RunPod only)</td></tr>
+      <tr><td><span class="method-badge get">GET</span></td><td><code>/api/alignment/health</code></td><td>Health check with backend status</td></tr>
+    </tbody>
+  </table>
 
   <div class="card-grid cols-2">
     <div class="card">
-      <h3>&#x1F4CA; Penalty-Based Scoring</h3>
-      <p>Starts at <strong>100</strong>. Each removed item is evaluated against ordered rules. First matching rule applies a penalty. Final score = max(0, 100 - total penalties).</p>
+      <h3 style="color:var(--accent);">&#x1F4E5; Request Schema</h3>
+      <div class="code-block" style="margin-top:0.5rem;">
+{
+  <span class="str">"mode"</span>: <span class="str">"align"</span> | <span class="str">"transcribe"</span>,
+  <span class="str">"audio_url"</span>: <span class="str">"https://..."</span>,       <span class="cmt">// OR</span>
+  <span class="str">"audio_base64"</span>: <span class="str">"..."</span>,            <span class="cmt">// base64</span>
+  <span class="str">"audio_format"</span>: <span class="str">".mp3"</span>,
+  <span class="str">"text"</span>: <span class="str">"..."</span>,                     <span class="cmt">// align only</span>
+  <span class="str">"language"</span>: <span class="str">"yi"</span>,
+  <span class="str">"word_timestamps"</span>: <span class="num">true</span>
+}
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--green);">&#x1F4E4; Response Schema</h3>
+      <div class="code-block" style="margin-top:0.5rem;">
+{
+  <span class="str">"full_text"</span>: <span class="str">"..."</span>,
+  <span class="str">"segments"</span>: [{
+    <span class="str">"start"</span>: <span class="num">0.0</span>, <span class="str">"end"</span>: <span class="num">2.98</span>,
+    <span class="str">"text"</span>: <span class="str">"..."</span>,
+    <span class="str">"words"</span>: [{
+      <span class="str">"word"</span>: <span class="str">"..."</span>,
+      <span class="str">"start"</span>: <span class="num">0.0</span>, <span class="str">"end"</span>: <span class="num">0.18</span>,
+      <span class="str">"confidence"</span>: <span class="num">0.85</span>
+    }]
+  }],
+  <span class="str">"timestamps"</span>: [<span class="cmt">/* flat word list */</span>],
+  <span class="str">"model"</span>: <span class="str">"yi-whisper-large-v3-turbo-ct2"</span>,
+  <span class="str">"language"</span>: <span class="str">"yi"</span>,
+  <span class="str">"mode"</span>: <span class="str">"align"</span>
+}
+      </div>
+    </div>
+  </div>
+</section>
 
-      <div class="score-bar-container">
-        <div class="score-row">
-          <span class="score-label" style="color:var(--green);">Excellent</span>
-          <div class="score-bar-bg">
-            <div class="score-bar excellent" style="width:100%;">90 &ndash; 100</div>
-          </div>
-        </div>
-        <div class="score-row">
-          <span class="score-label" style="color:#60a5fa;">Good</span>
-          <div class="score-bar-bg">
-            <div class="score-bar good" style="width:89%;">75 &ndash; 89</div>
-          </div>
-        </div>
-        <div class="score-row">
-          <span class="score-label" style="color:var(--yellow);">Moderate</span>
-          <div class="score-bar-bg">
-            <div class="score-bar moderate" style="width:74%;">50 &ndash; 74</div>
-          </div>
-        </div>
-        <div class="score-row">
-          <span class="score-label" style="color:var(--red);">Low / Poor</span>
-          <div class="score-bar-bg">
-            <div class="score-bar low" style="width:49%;">0 &ndash; 49</div>
-          </div>
-        </div>
+<div class="section-sep"></div>
+
+<!-- 7. DATA MODELS -->
+<section id="data-models" class="fade-in">
+  <h2><span class="num">7</span> Data Models & Flow</h2>
+  <p class="subtitle">How data moves through the system</p>
+
+  <div class="flow-container" style="margin-bottom:1.5rem;">
+    <h3 style="text-align:center; margin-bottom:1rem; color:var(--accent);">End-to-End Data Flow</h3>
+
+    <div class="flow-row">
+      <div class="flow-node blue">&#x1F3B5; Audio File<small>MP3 / WAV / M4A / OGG / FLAC</small></div>
+      <div class="flow-node purple">&#x1F4DD; Transcript Text<small>Plain Yiddish text (RTL)</small></div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow" style="transform:rotate(90deg)">&#x25B6;</span></div>
+
+    <div class="flow-row">
+      <div class="flow-node teal" style="min-width:350px;">
+        &#x1F4E6; Browser Encoding
+        <small>Audio &rarr; base64 | Text as-is</small>
       </div>
     </div>
 
-    <div class="card">
-      <h3>&#x2696;&#xFE0F; Penalty Rules (by confidence)</h3>
-      <table style="width:100%; font-size:0.82rem; margin-top:0.5rem;">
-        <tr style="border-bottom:1px solid var(--border);">
-          <td style="padding:0.4rem 0; color:var(--green); font-weight:600;">Zero (0)</td>
-          <td style="padding:0.4rem 0;">Special chars, whitespace, seif markers, force-removed patterns</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--border);">
-          <td style="padding:0.4rem 0; color:var(--accent); font-weight:600;">Low (1-3)</td>
-          <td style="padding:0.4rem 0;">Citations, heading styles with multiple indicators, stage directions</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--border);">
-          <td style="padding:0.4rem 0; color:var(--orange); font-weight:600;">Medium (4-6)</td>
-          <td style="padding:0.4rem 0;">Unknown parenthetical content, unknown editorial Hebrew</td>
-        </tr>
-        <tr>
-          <td style="padding:0.4rem 0; color:var(--red); font-weight:600;">High (8)</td>
-          <td style="padding:0.4rem 0;">Full bracketed paragraphs (may be spoken content)</td>
-        </tr>
-      </table>
-      <p style="margin-top:0.8rem; font-size:0.82rem;">The score acts as a <strong>quality assurance metric</strong> &mdash; low scores flag documents where automated cleaning may have incorrectly removed spoken content, prompting manual review.</p>
+    <div class="flow-row"><span class="flow-arrow" style="transform:rotate(90deg)">&#x25B6;</span></div>
+
+    <div class="flow-row">
+      <div class="flow-node blue">&#x2601;&#xFE0F; Cloudflare Pages Fn<small>Proxy + inject API key</small></div>
+      <span class="flow-arrow">&#x25B6;</span>
+      <div class="flow-node orange">&#x1F680; RunPod Handler<small>Decode base64 &rarr; temp file</small></div>
     </div>
+
+    <div class="flow-row"><span class="flow-arrow" style="transform:rotate(90deg)">&#x25B6;</span></div>
+
+    <div class="flow-row">
+      <div class="flow-node yellow" style="min-width:450px; text-align:left; padding:1rem 1.5rem;">
+        <strong>&#x1F9E0; Confusion-Aware Alignment Loop</strong>
+        <small style="display:block; margin-top:0.5rem; line-height:1.8;">
+          1. Text &rarr; <strong>WhisperResult</strong> (stable-ts data structure)<br>
+          2. Audio slice &rarr; <strong>SeekableAudioLoader</strong> (ffmpeg -ss seeking)<br>
+          3. <strong>model.align()</strong> with BreakableAligner monitoring<br>
+          4. <strong>get_confusion_zone()</strong> &mdash; sliding window quality check<br>
+          5. Retry / skip confusion zones<br>
+          6. <strong>Stitch</strong> all aligned pieces &rarr; final WhisperResult
+        </small>
+      </div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow" style="transform:rotate(90deg)">&#x25B6;</span></div>
+
+    <div class="flow-row">
+      <div class="flow-node green" style="min-width:450px; text-align:left; padding:1rem 1.5rem;">
+        <strong>&#x1F4CB; Structured Output</strong>
+        <small style="display:block; margin-top:0.5rem; line-height:1.8;">
+          &#x2022; <strong>segments[]</strong> &mdash; Nested: segments &rarr; words (hierarchical)<br>
+          &#x2022; <strong>timestamps[]</strong> &mdash; Flat: every word with {start, end, text, confidence}<br>
+          &#x2022; <strong>full_text</strong> &mdash; Complete transcript text<br>
+          &#x2022; <strong>model</strong> / <strong>language</strong> / <strong>mode</strong> &mdash; Metadata
+        </small>
+      </div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow" style="transform:rotate(90deg)">&#x25B6;</span></div>
+
+    <div class="flow-row">
+      <div class="flow-node green">&#x1F4AC; Word Chips<small>Clickable, color-coded</small></div>
+      <div class="flow-node green">&#x1F3B5; Audio Player<small>Karaoke sync</small></div>
+      <div class="flow-node green">&#x1F4BE; JSON Download<small>Full data export</small></div>
+    </div>
+  </div>
+
+  <div class="card" style="border-color:var(--yellow);">
+    <h3 style="color:var(--yellow);">&#x1F4C2; Dataset: 50_hours_mapping.csv</h3>
+    <p>422 rows mapping audio files to their transcripts on Google Drive. Used for batch alignment / evaluation.</p>
+    <table class="data-table" style="margin-top:0.8rem;">
+      <thead><tr><th>Column</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>Audio File Name</code></td><td>Name of the audio recording</td></tr>
+        <tr><td><code>Audio File Link</code></td><td>Google Drive URL to the audio file</td></tr>
+        <tr><td><code>Transcript File Name</code></td><td>Name of the matching transcript</td></tr>
+        <tr><td><code>Transcript File Link</code></td><td>Google Drive URL to the transcript document</td></tr>
+      </tbody>
+    </table>
   </div>
 </section>
 
@@ -924,33 +977,31 @@
   <div class="card-grid cols-2">
     <div class="card">
       <div class="tech-group">
+        <h3>&#x1F9E0; ML / AI</h3>
+        <div class="tech-pills">
+          <span class="tech-pill" style="border-color:var(--accent);">stable-ts (stable_whisper)</span>
+          <span class="tech-pill" style="border-color:var(--green);">faster-whisper (CTranslate2)</span>
+          <span class="tech-pill" style="border-color:var(--orange);">PyTorch 2.4.1</span>
+          <span class="tech-pill" style="border-color:var(--pink);">CUDA 12.1</span>
+          <span class="tech-pill" style="border-color:var(--yellow);">cuDNN 9</span>
+        </div>
+      </div>
+      <div class="tech-group">
+        <h3>&#x1F3A4; Model</h3>
+        <div class="tech-pills">
+          <span class="tech-pill" style="border-color:var(--accent2);">yi-whisper-large-v3-turbo-ct2</span>
+          <span class="tech-pill" style="border-color:var(--teal);">Yiddish fine-tuned</span>
+          <span class="tech-pill" style="border-color:var(--orange);">~1.5GB</span>
+        </div>
+      </div>
+      <div class="tech-group">
         <h3>&#x2699;&#xFE0F; Backend</h3>
         <div class="tech-pills">
-          <span class="tech-pill" style="border-color:var(--accent);">Python 3.11</span>
-          <span class="tech-pill" style="border-color:var(--green);">Flask 3.0</span>
-          <span class="tech-pill" style="border-color:var(--orange);">python-docx 1.1</span>
-          <span class="tech-pill" style="border-color:var(--pink);">lxml</span>
-          <span class="tech-pill" style="border-color:var(--accent2);">Gunicorn</span>
-          <span class="tech-pill" style="border-color:var(--teal);">python-dotenv</span>
-        </div>
-      </div>
-      <div class="tech-group">
-        <h3>&#x1F916; LLM Providers</h3>
-        <div class="tech-pills">
-          <span class="tech-pill" style="border-color:var(--green);">OpenAI</span>
-          <span class="tech-pill" style="border-color:var(--orange);">Anthropic</span>
-          <span class="tech-pill" style="border-color:var(--accent);">Google Gemini</span>
-          <span class="tech-pill" style="border-color:var(--yellow);">Groq</span>
-          <span class="tech-pill" style="border-color:var(--pink);">OpenRouter</span>
-          <span class="tech-pill" style="border-color:var(--teal);">Ollama (local)</span>
-        </div>
-      </div>
-      <div class="tech-group">
-        <h3>&#x1F4E1; Google APIs</h3>
-        <div class="tech-pills">
-          <span class="tech-pill" style="border-color:var(--accent);">Drive API v3</span>
-          <span class="tech-pill" style="border-color:var(--green);">Sheets API v4</span>
-          <span class="tech-pill" style="border-color:var(--orange);">OAuth 2.0</span>
+          <span class="tech-pill" style="border-color:var(--green);">Python 3.11</span>
+          <span class="tech-pill" style="border-color:var(--accent);">Flask 3.0</span>
+          <span class="tech-pill" style="border-color:var(--pink);">RunPod SDK</span>
+          <span class="tech-pill" style="border-color:var(--yellow);">NumPy</span>
+          <span class="tech-pill" style="border-color:var(--teal);">ffmpeg</span>
         </div>
       </div>
     </div>
@@ -958,28 +1009,27 @@
       <div class="tech-group">
         <h3>&#x1F3A8; Frontend</h3>
         <div class="tech-pills">
-          <span class="tech-pill" style="border-color:var(--accent);">Tailwind CSS (CDN)</span>
-          <span class="tech-pill" style="border-color:var(--green);">Vanilla JavaScript</span>
-          <span class="tech-pill" style="border-color:var(--orange);">Tippy.js</span>
-          <span class="tech-pill" style="border-color:var(--pink);">Single HTML File</span>
+          <span class="tech-pill" style="border-color:var(--accent);">Vanilla HTML/CSS/JS</span>
+          <span class="tech-pill" style="border-color:var(--green);">CSS Custom Properties</span>
+          <span class="tech-pill" style="border-color:var(--pink);">HTML5 Audio API</span>
+          <span class="tech-pill" style="border-color:var(--orange);">FileReader (base64)</span>
         </div>
       </div>
       <div class="tech-group">
         <h3>&#x1F6E0;&#xFE0F; Infrastructure</h3>
         <div class="tech-pills">
-          <span class="tech-pill" style="border-color:var(--accent);">Docker</span>
-          <span class="tech-pill" style="border-color:var(--accent2);">LibreOffice</span>
-          <span class="tech-pill" style="border-color:var(--green);">Heroku</span>
-          <span class="tech-pill" style="border-color:var(--orange);">Google Cloud Run</span>
+          <span class="tech-pill" style="border-color:var(--accent);">Cloudflare Pages</span>
+          <span class="tech-pill" style="border-color:var(--orange);">RunPod Serverless</span>
+          <span class="tech-pill" style="border-color:var(--green);">Docker</span>
+          <span class="tech-pill" style="border-color:var(--accent2);">GHCR (Container Registry)</span>
         </div>
       </div>
       <div class="tech-group">
-        <h3>&#x1F50D; Key Patterns</h3>
+        <h3>&#x1F9EA; Testing</h3>
         <div class="tech-pills">
-          <span class="tech-pill" style="border-color:var(--yellow);">Plugin Architecture</span>
-          <span class="tech-pill" style="border-color:var(--teal);">Decorator Registry</span>
-          <span class="tech-pill" style="border-color:var(--pink);">RTL-First Design</span>
-          <span class="tech-pill" style="border-color:var(--accent2);">Shared Mutable Context</span>
+          <span class="tech-pill" style="border-color:var(--yellow);">unittest</span>
+          <span class="tech-pill" style="border-color:var(--teal);">unittest.mock</span>
+          <span class="tech-pill" style="border-color:var(--pink);">12 test cases</span>
         </div>
       </div>
     </div>
@@ -990,119 +1040,113 @@
 
 <!-- 9. FILE STRUCTURE -->
 <section id="files" class="fade-in">
-  <h2><span class="num">9</span> Project File Structure</h2>
-  <p class="subtitle">Complete directory tree with file descriptions</p>
+  <h2><span class="num">9</span> Project Files <span style="font-weight:400; font-size:1rem; color:var(--text-dim);">(feature/stable-ts-alignment branch)</span></h2>
+  <p class="subtitle">27 new files added on top of the base transcript cleaner</p>
 
-  <div class="file-tree">
-<span class="dir">yiddish-audio-alignment/</span>
-<span class="file">  &#x251C;&#x2500; .env.example</span>          <span class="desc"># Environment variable template</span>
-<span class="file">  &#x251C;&#x2500; .gitignore</span>            <span class="desc"># Ignores venvs, uploads/, temp/, credentials</span>
-<span class="file">  &#x251C;&#x2500; Dockerfile</span>            <span class="desc"># Python 3.11-slim + LibreOffice</span>
-<span class="file">  &#x251C;&#x2500; README.md</span>             <span class="desc"># Setup, usage, plugin docs, deployment</span>
-<span class="file">  &#x251C;&#x2500; requirements.txt</span>      <span class="desc"># Python dependencies</span>
+  <div class="file-tree"><span class="dir">yiddish-audio-alignment/</span>
+<span class="dir">  &#x251C;&#x2500; alignment/</span>                     <span class="desc"># Core alignment library</span>
+<span class="highlight">  &#x2502;   &#x251C;&#x2500; __init__.py</span>               <span class="desc"># Package docstring</span>
+<span class="highlight">  &#x2502;   &#x251C;&#x2500; align.py</span>                  <span class="desc"># Main confusion-aware loop (285 lines)</span>
+<span class="highlight">  &#x2502;   &#x251C;&#x2500; breakable_aligner.py</span>      <span class="desc"># Quality-monitoring Aligner subclass (113 lines)</span>
+<span class="highlight">  &#x2502;   &#x251C;&#x2500; seekable_audio_loader.py</span>  <span class="desc"># ffmpeg -ss fast seeking (64 lines)</span>
+<span class="highlight">  &#x2502;   &#x2514;&#x2500; utils.py</span>                  <span class="desc"># Confidence ratios, confusion zones (123 lines)</span>
 <span class="file">  &#x251C;&#x2500;</span>
-<span class="highlight">  &#x251C;&#x2500; app.py</span>                <span class="desc"># Flask server &mdash; 16 HTTP endpoints (937 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; cleaner.py</span>            <span class="desc"># Cleaning orchestration, profiles, processor chains (318 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; clean_rate.py</span>         <span class="desc"># Confidence scoring system (520 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; converter.py</span>          <span class="desc"># .doc to .docx conversion (243 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; diff_utils.py</span>         <span class="desc"># Line &amp; word-level diff generation (306 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; document_model.py</span>     <span class="desc"># Data model: Document, Paragraph, TextRun (171 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; document_processor.py</span> <span class="desc"># Word parsing, text extraction, metadata (496 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; drive_downloader.py</span>   <span class="desc"># Google Drive API integration (349 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; llm_processor.py</span>      <span class="desc"># Multi-provider LLM processing (449 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; registry.py</span>           <span class="desc"># Plugin registry decorators (137 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; sheet_processor.py</span>    <span class="desc"># Google Sheets batch processing (741 lines)</span>
-<span class="highlight">  &#x251C;&#x2500; utils.py</span>              <span class="desc"># Hebrew gematria validation + XML sanitization (91 lines)</span>
+<span class="dir">  &#x251C;&#x2500; blueprints/</span>                    <span class="desc"># Flask Blueprint for HTTP API</span>
+<span class="highlight">  &#x2502;   &#x251C;&#x2500; __init__.py</span>               <span class="desc"># Registration instructions</span>
+<span class="highlight">  &#x2502;   &#x2514;&#x2500; alignment_bp.py</span>           <span class="desc"># /api/alignment/* endpoints (260 lines)</span>
 <span class="file">  &#x251C;&#x2500;</span>
-<span class="dir">  &#x251C;&#x2500; processors/</span>           <span class="desc"># Cleaning plugin directory</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; __init__.py</span>       <span class="desc"># Auto-imports all processors</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; base.py</span>           <span class="desc"># BaseProcessor ABC</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; special_chars.py</span>  <span class="desc"># Remove invisible Unicode</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; whitespace.py</span>     <span class="desc"># Normalize spacing</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; seif_marker.py</span>    <span class="desc"># Remove Hebrew section numbers</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; title_style.py</span>    <span class="desc"># Remove headings (multi-signal)</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; brackets_inline.py</span><span class="desc"># Remove inline [notes]</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; parentheses_notes.py</span> <span class="desc"># Remove (notes) &mdash; OFF by default</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; editorial_hebrew.py</span>  <span class="desc"># Remove editorial Hebrew (35+ patterns)</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; force_remove.py</span>   <span class="desc"># Force-remove blocked patterns</span>
-<span class="file">  &#x2502;   &#x2514;&#x2500; regex_processor.py</span><span class="desc"># Generic regex removal</span>
+<span class="dir">  &#x251C;&#x2500; runpod/</span>                        <span class="desc"># GPU serverless deployment</span>
+<span class="highlight">  &#x2502;   &#x251C;&#x2500; Dockerfile</span>                <span class="desc"># CUDA 12.1 + baked model (23 lines)</span>
+<span class="highlight">  &#x2502;   &#x251C;&#x2500; handler.py</span>                <span class="desc"># RunPod handler: transcribe + align (182 lines)</span>
+<span class="highlight">  &#x2502;   &#x2514;&#x2500; README.md</span>                 <span class="desc"># Deployment instructions</span>
 <span class="file">  &#x251C;&#x2500;</span>
-<span class="dir">  &#x251C;&#x2500; writers/</span>              <span class="desc"># Output writer plugin directory</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; __init__.py</span>       <span class="desc"># Auto-imports all writers</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; base.py</span>           <span class="desc"># OutputWriter ABC</span>
-<span class="file">  &#x2502;   &#x251C;&#x2500; docx_writer.py</span>    <span class="desc"># .docx output with RTL + formatting</span>
-<span class="file">  &#x2502;   &#x2514;&#x2500; txt_writer.py</span>     <span class="desc"># Plain UTF-8 text output</span>
+<span class="dir">  &#x251C;&#x2500; site/</span>                          <span class="desc"># Cloudflare Pages frontend</span>
+<span class="dir">  &#x2502;   &#x251C;&#x2500; public/</span>
+<span class="highlight">  &#x2502;   &#x2502;   &#x2514;&#x2500; index.html</span>            <span class="desc"># Web UI: dark theme, RTL, karaoke (556 lines)</span>
+<span class="dir">  &#x2502;   &#x2514;&#x2500; functions/api/</span>
+<span class="highlight">  &#x2502;       &#x2514;&#x2500; align.js</span>              <span class="desc"># Pages Function: RunPod API proxy (122 lines)</span>
 <span class="file">  &#x251C;&#x2500;</span>
-<span class="dir">  &#x2514;&#x2500; templates/</span>
-<span class="file">      &#x2514;&#x2500; index.html</span>        <span class="desc"># Single-page web UI (~2700 lines)</span>
+<span class="dir">  &#x251C;&#x2500; reference/</span>                     <span class="desc"># Read-only ivrit-ai source code</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; ivrit_align.py</span>            <span class="desc"># Original Hebrew alignment</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; ivrit_breakable_aligner.py</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; ivrit_infer_runpod.py</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; ivrit_seekable_audio_loader.py</span>
+<span class="file">  &#x2502;   &#x2514;&#x2500; ivrit_utils.py</span>
+<span class="file">  &#x251C;&#x2500;</span>
+<span class="dir">  &#x251C;&#x2500; tests/</span>
+<span class="highlight">  &#x2502;   &#x251C;&#x2500; __init__.py</span>
+<span class="highlight">  &#x2502;   &#x2514;&#x2500; test_alignment.py</span>         <span class="desc"># 12 unit tests (161 lines)</span>
+<span class="file">  &#x251C;&#x2500;</span>
+<span class="dir">  &#x251C;&#x2500; docs/</span>
+<span class="highlight">  &#x2502;   &#x251C;&#x2500; ALIGNMENT_API.md</span>          <span class="desc"># API reference with curl examples (315 lines)</span>
+<span class="highlight">  &#x2502;   &#x2514;&#x2500; ALIGNMENT_BUILD_GUIDE.md</span>  <span class="desc"># Step-by-step build narrative (224 lines)</span>
+<span class="file">  &#x251C;&#x2500;</span>
+<span class="highlight">  &#x251C;&#x2500; runpod_client.py</span>              <span class="desc"># Python client for RunPod endpoint (103 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; mapping_config.py</span>             <span class="desc"># Audio-transcript mapping config (54 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; requirements-alignment.txt</span>    <span class="desc"># ML dependencies (7 packages)</span>
+<span class="highlight">  &#x251C;&#x2500; AGENT_PLAN.md</span>                 <span class="desc"># Multi-agent build plan (1330 lines)</span>
+<span class="file">  &#x251C;&#x2500; 50_hours_mapping.csv</span>          <span class="desc"># 422 audio-transcript pairs dataset</span>
+<span class="file">  &#x2514;&#x2500; architecture.html</span>             <span class="desc"># This file</span>
   </div>
 </section>
 
 <div class="section-sep"></div>
 
-<!-- 10. DESIGN DECISIONS -->
-<section class="fade-in" style="padding-bottom:4rem;">
-  <h2><span class="num">10</span> Notable Design Decisions</h2>
-  <p class="subtitle">Key architectural choices and their rationale</p>
+<!-- 10. KEY DESIGN DECISIONS -->
+<section id="decisions" class="fade-in" style="padding-bottom:4rem;">
+  <h2><span class="num">10</span> Key Design Decisions</h2>
+  <p class="subtitle">Architectural choices and their rationale</p>
 
   <div class="card-grid cols-2">
-    <div class="card" style="border-left:3px solid var(--accent);">
-      <h3>&#x1F9E9; Plugin Architecture</h3>
-      <p>Decorator-based registry (<code>@ProcessorRegistry.register</code>) allows adding new processors by simply creating a file. Zero configuration needed &mdash; import side effects trigger registration.</p>
-    </div>
-    <div class="card" style="border-left:3px solid var(--green);">
-      <h3>&#x1F504; Dual Processing Paradigm</h3>
-      <p>Rule-based processing is predictable and auditable. LLM processing handles ambiguous cases. Users choose based on their needs &mdash; accuracy vs. determinism.</p>
-    </div>
     <div class="card" style="border-left:3px solid var(--orange);">
-      <h3>&#x1F4CB; Shared Mutable Context</h3>
-      <p>Processors share a context dict containing paragraph metadata. Each processor can read and mutate it, creating a chain where later processors benefit from earlier modifications.</p>
+      <h3>&#x1F433; Model Baked Into Docker Image</h3>
+      <p>The ~1.5GB yi-whisper model is downloaded at <code>docker build</code> time, not runtime. This eliminates cold-start model download delays. Tradeoff: larger image, but the image is cached on RunPod workers.</p>
     </div>
-    <div class="card" style="border-left:3px solid var(--pink);">
-      <h3>&#x2B05;&#xFE0F; RTL-First Design</h3>
-      <p>Document model defaults to right-to-left alignment and RTL text direction. DOCX writer configures all output with RTL formatting, matching Hebrew/Yiddish text direction.</p>
-    </div>
-    <div class="card" style="border-left:3px solid var(--accent2);">
-      <h3>&#x1F4CA; Quality Assurance Scoring</h3>
-      <p>The clean rate acts as a built-in confidence metric, flagging documents where automated cleaning may have incorrectly removed spoken content. Essential for the ambiguous Yiddish transcript domain.</p>
-    </div>
-    <div class="card" style="border-left:3px solid var(--yellow);">
-      <h3>&#x1F4C4; Single-File Frontend</h3>
-      <p>The entire UI is one ~2700-line HTML file with Tailwind CSS and vanilla JS. No build step, no framework, no bundler &mdash; maximum simplicity for deployment and modification.</p>
+    <div class="card" style="border-left:3px solid var(--accent);">
+      <h3>&#x1F310; Language Forced to "yi"</h3>
+      <p>The build guide emphasizes this is <strong>non-negotiable</strong>. Whisper's auto-detection fails for Yiddish (often detects Hebrew or German). Explicitly setting <code>language="yi"</code> is critical for accuracy.</p>
     </div>
     <div class="card" style="border-left:3px solid var(--teal);">
-      <h3>&#x1F522; Hebrew Gematria Validation</h3>
-      <p>Seif marker detection validates Hebrew numeral sequences by checking that letter values are non-increasing (e.g., <span dir="rtl">&#x05E7;&#x05DB;</span> = 100, 20 is valid). Prevents false positives from regular Hebrew text.</p>
+      <h3>&#x2601;&#xFE0F; Cloudflare Pages Function as Proxy</h3>
+      <p>The Cloudflare Pages Function keeps the RunPod API key server-side while presenting a clean, unauthenticated API to the browser. Users never see or need the API key.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--green);">
+      <h3>&#x1F504; Scale-to-Zero GPU</h3>
+      <p>RunPod workers scale to 0 when idle (10s timeout), saving costs. The tradeoff is ~2.5 minute cold starts when no worker is active. Acceptable for non-real-time use cases.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--pink);">
+      <h3>&#x1F9E0; Confusion-Aware vs. Single-Pass</h3>
+      <p>A single-pass alignment degrades on long audio (>5 min). The iterative approach detects quality drops, backtracks, and retries &mdash; producing reliable timestamps even on hour-long recordings.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--accent2);">
+      <h3>&#x1F527; Additive Branch Strategy</h3>
+      <p>The feature branch adds 27 new files but modifies <strong>zero existing files</strong> from the base project. This keeps the transcript cleaner and alignment features completely independent, enabling clean merges.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--yellow);">
+      <h3>&#x1F3B5; Karaoke Playback in Browser</h3>
+      <p>The <code>timeupdate</code> event on the HTML5 <code>&lt;audio&gt;</code> element drives real-time word highlighting. Click any word chip to seek. Zero dependencies &mdash; pure vanilla JS.</p>
     </div>
     <div class="card" style="border-left:3px solid var(--red);">
-      <h3>&#x1F50D; Text Box Merging</h3>
-      <p>Word "text boxes" (used for drop caps, special formatting) are extracted via XPath on the Word XML and merged into adjacent paragraphs, ensuring no spoken content is lost.</p>
+      <h3>&#x1F4CB; Dual Output Formats</h3>
+      <p><code>segments[]</code> (hierarchical: segments containing words) and <code>timestamps[]</code> (flat: every word in order) provide both structured and convenient access to the same data.</p>
     </div>
   </div>
 </section>
 
 <script>
-  // Journey tab switching
+  // Journey tabs
   function switchJourney(idx) {
-    document.querySelectorAll('.journey-tab').forEach((t, i) => {
-      t.classList.toggle('active', i === idx);
-    });
-    document.querySelectorAll('.journey-panel').forEach((p, i) => {
-      p.classList.toggle('active', i === idx);
-    });
+    document.querySelectorAll('.journey-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+    document.querySelectorAll('.journey-panel').forEach((p, i) => p.classList.toggle('active', i === idx));
   }
 
   // Nav active tracking
-  const sections = document.querySelectorAll('section[id], .hero');
+  const sections = document.querySelectorAll('section[id]');
   const navLinks = document.querySelectorAll('nav a');
   window.addEventListener('scroll', () => {
     let current = '';
-    sections.forEach(s => {
-      if (s.id && window.scrollY >= s.offsetTop - 120) current = s.id;
-    });
-    navLinks.forEach(a => {
-      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
-    });
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 120) current = s.id; });
+    navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current));
   });
 
   // Fade-in on scroll
@@ -1110,6 +1154,14 @@
     entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
   }, { threshold: 0.1 });
   document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Word chip demo interaction
+  document.querySelectorAll('.word-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.word-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
 </script>
 
 </body>
