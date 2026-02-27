@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yiddish Audio Alignment - Architecture & User Journey</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #475569;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #4ade80;
+    --orange: #fb923c;
+    --pink: #f472b6;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --teal: #2dd4bf;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(15,23,42,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; gap: 1.5rem;
+    height: 56px;
+  }
+  nav .logo { font-weight: 700; font-size: 1.1rem; color: var(--accent); white-space: nowrap; }
+  nav a {
+    color: var(--text-dim); text-decoration: none; font-size: 0.85rem;
+    padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.2s;
+  }
+  nav a:hover, nav a.active { color: var(--text); background: var(--surface); }
+
+  /* HERO */
+  .hero {
+    margin-top: 56px; padding: 4rem 2rem 3rem;
+    text-align: center;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 { font-size: 2.6rem; font-weight: 800; margin-bottom: 0.5rem; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { color: var(--text-dim); font-size: 1.15rem; max-width: 700px; margin: 0 auto; }
+  .hero .badges { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  .badge .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* SECTIONS */
+  section { max-width: 1200px; margin: 0 auto; padding: 3rem 2rem; }
+  section h2 {
+    font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  section h2 .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 10px; font-size: 0.9rem;
+    background: var(--accent); color: var(--bg); font-weight: 800;
+  }
+  section .subtitle { color: var(--text-dim); margin-bottom: 2rem; }
+
+  /* CARDS */
+  .card-grid { display: grid; gap: 1rem; }
+  .card-grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+  .card-grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .card-grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+  .card p, .card li { color: var(--text-dim); font-size: 0.9rem; }
+  .card ul { list-style: none; padding: 0; }
+  .card ul li::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 0.5rem; vertical-align: middle; }
+  .card .icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; margin-bottom: 0.8rem; flex-shrink: 0;
+  }
+
+  /* FLOW DIAGRAMS */
+  .flow-container {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem; overflow-x: auto;
+  }
+  .flow-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0;
+  }
+  .flow-node {
+    padding: 0.7rem 1.2rem; border-radius: 10px; font-size: 0.85rem;
+    font-weight: 600; text-align: center; white-space: nowrap;
+    border: 2px solid; min-width: 120px;
+  }
+  .flow-node.blue { background: rgba(56,189,248,0.12); border-color: var(--accent); color: var(--accent); }
+  .flow-node.purple { background: rgba(129,140,248,0.12); border-color: var(--accent2); color: var(--accent2); }
+  .flow-node.green { background: rgba(74,222,128,0.12); border-color: var(--green); color: var(--green); }
+  .flow-node.orange { background: rgba(251,146,60,0.12); border-color: var(--orange); color: var(--orange); }
+  .flow-node.pink { background: rgba(244,114,182,0.12); border-color: var(--pink); color: var(--pink); }
+  .flow-node.teal { background: rgba(45,212,191,0.12); border-color: var(--teal); color: var(--teal); }
+  .flow-node.red { background: rgba(248,113,113,0.12); border-color: var(--red); color: var(--red); }
+  .flow-node.yellow { background: rgba(251,191,36,0.12); border-color: var(--yellow); color: var(--yellow); }
+  .flow-node small { display: block; font-weight: 400; font-size: 0.75rem; opacity: 0.8; }
+  .flow-arrow { color: var(--text-dim); font-size: 1.2rem; flex-shrink: 0; }
+  .flow-arrow.down { transform: rotate(90deg); }
+  .flow-split { display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; }
+  .flow-branch {
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    padding: 1rem; border: 1px dashed var(--border); border-radius: 12px; min-width: 180px;
+  }
+  .flow-branch-label {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; padding: 0.2rem 0.6rem; border-radius: 4px;
+    margin-bottom: 0.3rem;
+  }
+
+  /* PIPELINE VISUALIZATION */
+  .pipeline {
+    display: flex; flex-direction: column; gap: 0;
+    position: relative;
+  }
+  .pipeline::before {
+    content: ''; position: absolute; left: 24px; top: 24px; bottom: 24px;
+    width: 2px; background: var(--border);
+  }
+  .pipeline-step {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: 0.8rem 0; position: relative;
+  }
+  .pipeline-dot {
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+    border: 3px solid; position: relative; z-index: 1;
+    margin-top: 4px; margin-left: 18px;
+  }
+  .pipeline-content { flex: 1; }
+  .pipeline-content h4 { font-size: 0.95rem; font-weight: 700; }
+  .pipeline-content p { color: var(--text-dim); font-size: 0.85rem; }
+
+  /* FILE TREE */
+  .file-tree {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem; font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.82rem; line-height: 1.8; overflow-x: auto;
+  }
+  .file-tree .dir { color: var(--accent); font-weight: 700; }
+  .file-tree .file { color: var(--text-dim); }
+  .file-tree .desc { color: var(--text-dim); opacity: 0.6; font-style: italic; }
+  .file-tree .highlight { color: var(--yellow); font-weight: 600; }
+
+  /* TABLE */
+  .data-table {
+    width: 100%; border-collapse: collapse; font-size: 0.85rem;
+    background: var(--surface); border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .data-table th {
+    background: var(--surface2); padding: 0.8rem 1rem;
+    text-align: left; font-weight: 700; font-size: 0.8rem;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 0.7rem 1rem; border-bottom: 1px solid rgba(71,85,105,0.4);
+    vertical-align: top;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table code {
+    background: var(--surface2); padding: 0.15rem 0.4rem; border-radius: 4px;
+    font-size: 0.8rem; font-family: 'Cascadia Code', monospace;
+  }
+  .method-badge {
+    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+    font-size: 0.7rem; font-weight: 700; font-family: monospace;
+  }
+  .method-badge.get { background: rgba(74,222,128,0.15); color: var(--green); }
+  .method-badge.post { background: rgba(56,189,248,0.15); color: var(--accent); }
+
+  /* JOURNEY TABS */
+  .journey-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .journey-tab {
+    padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
+    color: var(--text-dim);
+  }
+  .journey-tab:hover { border-color: var(--accent); color: var(--text); }
+  .journey-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .journey-panel { display: none; }
+  .journey-panel.active { display: block; }
+
+  /* STEP CARDS */
+  .steps { display: flex; flex-direction: column; gap: 0; position: relative; }
+  .steps::before {
+    content: ''; position: absolute; left: 19px; top: 28px; bottom: 28px;
+    width: 2px; background: linear-gradient(to bottom, var(--accent), var(--accent2), var(--green));
+  }
+  .step {
+    display: flex; gap: 1rem; position: relative; padding: 0.5rem 0;
+  }
+  .step-num {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.85rem; z-index: 1;
+    background: var(--surface); border: 2px solid var(--accent);
+    color: var(--accent);
+  }
+  .step-body {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem 1.2rem;
+  }
+  .step-body h4 { font-size: 0.95rem; margin-bottom: 0.3rem; }
+  .step-body p { color: var(--text-dim); font-size: 0.85rem; }
+
+  /* SCORING VIZ */
+  .score-bar-container { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; }
+  .score-row { display: flex; align-items: center; gap: 0.8rem; }
+  .score-label { width: 90px; text-align: right; font-size: 0.8rem; font-weight: 600; }
+  .score-bar-bg {
+    flex: 1; height: 24px; background: var(--surface2); border-radius: 6px;
+    overflow: hidden; position: relative;
+  }
+  .score-bar {
+    height: 100%; border-radius: 6px; display: flex; align-items: center;
+    padding-left: 0.5rem; font-size: 0.7rem; font-weight: 700; transition: width 1s ease;
+  }
+  .score-bar.excellent { background: linear-gradient(90deg, #22c55e, #4ade80); color: #052e16; }
+  .score-bar.good { background: linear-gradient(90deg, #3b82f6, #60a5fa); color: #172554; }
+  .score-bar.moderate { background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #451a03; }
+  .score-bar.low { background: linear-gradient(90deg, #ef4444, #f87171); color: #450a0a; }
+
+  /* TECH STACK */
+  .tech-group { margin-bottom: 1.5rem; }
+  .tech-group h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--accent); }
+  .tech-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .tech-pill {
+    padding: 0.35rem 0.8rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0.3rem;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    nav { gap: 0.5rem; padding: 0 0.8rem; overflow-x: auto; }
+    .hero h1 { font-size: 1.8rem; }
+    section { padding: 2rem 1rem; }
+    .flow-row { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg) !important; }
+    .card-grid.cols-2, .card-grid.cols-3, .card-grid.cols-4 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* SEPARATOR */
+  .section-sep {
+    max-width: 1200px; margin: 0 auto;
+    border-top: 1px solid var(--border);
+  }
+
+  /* TOOLTIP */
+  .tip {
+    position: relative; cursor: help;
+    border-bottom: 1px dotted var(--text-dim);
+  }
+  .tip:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    background: var(--surface2); color: var(--text); font-size: 0.75rem;
+    padding: 0.4rem 0.8rem; border-radius: 6px; white-space: nowrap;
+    border: 1px solid var(--border); z-index: 10; pointer-events: none;
+  }
+
+  /* ANIM */
+  .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.5s, transform 0.5s; }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Yiddish Transcript Cleaner</div>
+  <a href="#overview" class="active">Overview</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#pipeline">Pipeline</a>
+  <a href="#data-flow">Data Flow</a>
+  <a href="#journeys">User Journeys</a>
+  <a href="#api">API</a>
+  <a href="#scoring">Scoring</a>
+  <a href="#tech">Tech Stack</a>
+  <a href="#files">Files</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Clean <span>Yiddish</span> Transcripts</h1>
+  <p>A web application for cleaning Yiddish transcripts by removing non-speech editorial content from Word documents to extract pure spoken content.</p>
+  <div class="badges">
+    <span class="badge"><span class="dot" style="background:var(--accent)"></span> Plugin Architecture</span>
+    <span class="badge"><span class="dot" style="background:var(--green)"></span> Rule-Based + LLM</span>
+    <span class="badge"><span class="dot" style="background:var(--orange)"></span> RTL / Hebrew / Yiddish</span>
+    <span class="badge"><span class="dot" style="background:var(--pink)"></span> Google Drive & Sheets</span>
+    <span class="badge"><span class="dot" style="background:var(--accent2)"></span> Quality Scoring</span>
+  </div>
+</div>
+
+<!-- 1. OVERVIEW -->
+<section id="overview" class="fade-in">
+  <h2><span class="num">1</span> Project Overview</h2>
+  <p class="subtitle">What this project does and the problem it solves</p>
+
+  <div class="card-grid cols-2">
+    <div class="card">
+      <div class="icon" style="background:rgba(56,189,248,0.15); color:var(--accent);">&#x1F3A4;</div>
+      <h3>The Problem</h3>
+      <p>Yiddish oral recordings (Chassidic lectures, shiurim) are transcribed into Word documents. Transcribers add editorial content &mdash; titles, section numbers (Hebrew gematria), source citations, stage directions, timestamps &mdash; that are <strong>not part of the original speech</strong>.</p>
+      <p style="margin-top:0.5rem">When aligning audio to text, or producing clean reading copies, this editorial content must be stripped out while preserving every word that was actually spoken.</p>
+    </div>
+    <div class="card">
+      <div class="icon" style="background:rgba(74,222,128,0.15); color:var(--green);">&#x2728;</div>
+      <h3>The Solution</h3>
+      <p>A dual-mode cleaning system:</p>
+      <ul style="margin-top:0.5rem">
+        <li style="color:var(--accent)">&#x2022; <strong>Rule-Based Pipeline</strong> &mdash; 9 modular processor plugins that use regex, Word styles/fonts, and Hebrew gematria validation</li>
+        <li style="color:var(--green)">&#x2022; <strong>LLM Mode</strong> &mdash; Send text to AI models (OpenAI, Anthropic, Google, Groq, etc.) for context-aware cleaning</li>
+      </ul>
+      <p style="margin-top:0.5rem">Supports single files, Google Drive folders, and Google Sheets batch processing.</p>
+    </div>
+  </div>
+</section>
+
+<div class="section-sep"></div>
+
+<!-- 2. HIGH-LEVEL ARCHITECTURE -->
+<section id="architecture" class="fade-in">
+  <h2><span class="num">2</span> System Architecture</h2>
+  <p class="subtitle">How all the major components connect</p>
+
+  <div class="flow-container">
+    <!-- Top layer: Inputs -->
+    <div style="text-align:center; margin-bottom:0.5rem;">
+      <span class="flow-branch-label" style="background:rgba(56,189,248,0.15); color:var(--accent);">Input Sources</span>
+    </div>
+    <div class="flow-row">
+      <div class="flow-node blue">&#x1F4C4; File Upload<small>.doc / .docx</small></div>
+      <div class="flow-node blue">&#x1F4C1; Google Drive<small>Files & Folders</small></div>
+      <div class="flow-node blue">&#x1F4CA; Google Sheets<small>Batch Processing</small></div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
+
+    <!-- Web UI -->
+    <div class="flow-row">
+      <div class="flow-node purple" style="min-width:400px;">
+        &#x1F310; Web UI &mdash; Single-Page Application
+        <small>index.html &bull; Tailwind CSS &bull; Vanilla JS &bull; ~2700 lines</small>
+      </div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
+
+    <!-- Flask API -->
+    <div class="flow-row">
+      <div class="flow-node orange" style="min-width:400px;">
+        &#x2699;&#xFE0F; Flask API Server
+        <small>app.py &bull; 16 endpoints &bull; Port 5050</small>
+      </div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
+
+    <!-- Document Processing Layer -->
+    <div class="flow-row">
+      <div class="flow-node teal" style="min-width:300px;">
+        &#x1F4D1; Document Processor
+        <small>document_processor.py &bull; Parse .docx, extract metadata</small>
+      </div>
+      <span class="flow-arrow">&#x25C0;</span>
+      <div class="flow-node yellow">
+        &#x1F504; Converter
+        <small>.doc &rarr; .docx<br>LibreOffice / COM</small>
+      </div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
+
+    <!-- Split: Rule-Based vs LLM -->
+    <div class="flow-split">
+      <div class="flow-branch">
+        <span class="flow-branch-label" style="background:rgba(56,189,248,0.15); color:var(--accent);">Path A: Rule-Based</span>
+        <div class="flow-node blue">&#x1F9E9; Plugin Registry<small>registry.py</small></div>
+        <span class="flow-arrow down">&#x25BC;</span>
+        <div class="flow-node blue">&#x1F527; TranscriptCleaner<small>cleaner.py &bull; Profiles</small></div>
+        <span class="flow-arrow down">&#x25BC;</span>
+        <div class="flow-node blue" style="min-width:200px;">
+          &#x1F50C; 9 Processor Plugins
+          <small>seif, title, brackets, editorial...</small>
+        </div>
+        <span class="flow-arrow down">&#x25BC;</span>
+        <div class="flow-node green">&#x1F4CA; Clean Rate Score<small>clean_rate.py &bull; 0-100</small></div>
+      </div>
+
+      <div class="flow-branch">
+        <span class="flow-branch-label" style="background:rgba(244,114,182,0.15); color:var(--pink);">Path B: LLM-Based</span>
+        <div class="flow-node pink">&#x1F916; LLM Processor<small>llm_processor.py</small></div>
+        <span class="flow-arrow down">&#x25BC;</span>
+        <div class="flow-node pink" style="min-width:200px;">
+          &#x1F310; Provider APIs
+          <small>OpenAI &bull; Anthropic &bull; Google<br>Groq &bull; OpenRouter &bull; Ollama</small>
+        </div>
+        <span class="flow-arrow down">&#x25BC;</span>
+        <div class="flow-node green">&#x1F4DD; Diff Generation<small>diff_utils.py</small></div>
+      </div>
+    </div>
+
+    <div class="flow-row" style="margin-top:1rem;"><span class="flow-arrow down">&#x25BC;</span></div>
+
+    <!-- Output -->
+    <div style="text-align:center; margin-top:0.3rem;">
+      <span class="flow-branch-label" style="background:rgba(74,222,128,0.15); color:var(--green);">Output</span>
+    </div>
+    <div class="flow-row">
+      <div class="flow-node green">&#x1F4C4; .docx<small>RTL, formatted</small></div>
+      <div class="flow-node green">&#x1F4DD; .txt<small>Plain UTF-8</small></div>
+      <div class="flow-node green">&#x1F4CA; Stats & Diff<small>Before/after view</small></div>
+      <div class="flow-node green">&#x1F517; Google Drive<small>Uploaded result</small></div>
+    </div>
+  </div>
+</section>
+
+<div class="section-sep"></div>
+
+<!-- 3. PROCESSING PIPELINE -->
+<section id="pipeline" class="fade-in">
+  <h2><span class="num">3</span> Processing Pipeline</h2>
+  <p class="subtitle">The 9 processor plugins that form the rule-based cleaning chain</p>
+
+  <div class="card-grid cols-2" style="margin-bottom:2rem;">
+    <div>
+      <div class="pipeline">
+        <div class="pipeline-step">
+          <div class="pipeline-dot" style="border-color:var(--accent); background:var(--accent);"></div>
+          <div class="pipeline-content">
+            <h4>1. Special Characters</h4>
+            <p>Removes invisible Unicode: zero-width spaces, BOM markers, LTR/RTL directional marks</p>
+          </div>
+        </div>
+        <div class="pipeline-step">
+          <div class="pipeline-dot" style="border-color:var(--accent); background:var(--accent);"></div>
+          <div class="pipeline-content">
+            <h4>2. Whitespace Normalization</h4>
+            <p>Collapses multiple spaces, strips whitespace around newlines</p>
+          </div>
+        </div>
+        <div class="pipeline-step">
+          <div class="pipeline-dot" style="border-color:var(--orange); background:var(--orange);"></div>
+          <div class="pipeline-content">
+            <h4>3. Seif Markers</h4>
+            <p>Removes Hebrew gematria section numbering (e.g., <code style="color:var(--yellow)">&#x05D0;.</code>, <code style="color:var(--yellow)">&#x05D9;&#x05D1;*.</code>). Uses gematria validation: checks descending numeric values of Hebrew letters</p>
+          </div>
+        </div>
+        <div class="pipeline-step">
+          <div class="pipeline-dot" style="border-color:var(--pink); background:var(--pink);"></div>
+          <div class="pipeline-content">
+            <h4>4. Title/Style Detection</h4>
+            <p>Multi-signal: Word heading styles, short paragraphs (&lt;5 words), large font (&gt;1.2x average), all-bold short paragraphs. Respects exception patterns</p>
+          </div>
+        </div>
+        <div class="pipeline-step">
+          <div class="pipeline-dot" style="border-color:var(--accent2); background:var(--accent2);"></div>
+          <div class="pipeline-content">
+            <h4>5. Inline Brackets</h4>
+            <p>Removes <code>[editorial notes]</code> inline but preserves <code>[entire paragraphs in brackets]</code> (treated as spoken content)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="pipeline">
+        <div class="pipeline-step">
+          <div class="pipeline-dot" style="border-color:var(--text-dim);"></div>
+          <div class="pipeline-content">
+            <h4>6. Parentheses Notes <span style="color:var(--red); font-size:0.75rem;">(OFF by default)</span></h4>
+            <p>Removes non-speech (parenthetical) content. Disabled by default since parenthetical remarks are often spoken</p>
+          </div>
+        </div>
+        <div class="pipeline-step">
+          <div class="pipeline-dot" style="border-color:var(--teal); background:var(--teal);"></div>
+          <div class="pipeline-content">
+            <h4>7. Editorial Hebrew</h4>
+            <p>35+ regex patterns matching cross-references, position markers, source citations, editor notes</p>
+          </div>
+        </div>
+        <div class="pipeline-step">
+          <div class="pipeline-dot" style="border-color:var(--red); background:var(--red);"></div>
+          <div class="pipeline-content">
+            <h4>8. Force Remove</h4>
+            <p>Force-removes paragraphs containing specific blocked patterns (e.g., <code style="color:var(--yellow)">&#x05D1;&#x05E1;"&#x05D3;</code>)</p>
+          </div>
+        </div>
+        <div class="pipeline-step">
+          <div class="pipeline-dot" style="border-color:var(--yellow); background:var(--yellow);"></div>
+          <div class="pipeline-content">
+            <h4>9. Regex Processor</h4>
+            <p>Generic regex-based removal with configurable exception patterns for custom rules</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1.5rem; border-color:var(--accent2);">
+        <h3 style="color:var(--accent2);">&#x1F9E9; Plugin Registry Pattern</h3>
+        <p>Each processor auto-registers via the <code>@ProcessorRegistry.register</code> decorator. Adding a new processor requires only:</p>
+        <ol style="color:var(--text-dim); font-size:0.85rem; padding-left:1.2rem; margin-top:0.5rem;">
+          <li>Create a file in <code>processors/</code></li>
+          <li>Extend <code>BaseProcessor</code></li>
+          <li>Implement <code>process(text, context)</code></li>
+          <li>Return <code>(cleaned_text, removed_items)</code></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-sep"></div>
+
+<!-- 4. DATA FLOW -->
+<section id="data-flow" class="fade-in">
+  <h2><span class="num">4</span> Data Flow</h2>
+  <p class="subtitle">Detailed flow from input documents through processing to output</p>
+
+  <div class="flow-container" style="margin-bottom:1.5rem;">
+    <h3 style="text-align:center; margin-bottom:1rem; color:var(--accent);">Document Processing Data Flow</h3>
+
+    <div class="flow-row">
+      <div class="flow-node blue">&#x1F4C4; Word Document<small>.doc or .docx</small></div>
+      <span class="flow-arrow">&#x25B6;</span>
+      <div class="flow-node yellow">&#x1F504; Format Check<small>.doc? Convert via LibreOffice</small></div>
+      <span class="flow-arrow">&#x25B6;</span>
+      <div class="flow-node teal">&#x1F50D; python-docx Parse<small>XML &rarr; Paragraphs</small></div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
+
+    <div class="flow-row">
+      <div class="flow-node purple" style="min-width:500px; text-align:left; padding:1rem 1.5rem;">
+        <strong>&#x1F4CB; Paragraph Metadata Extraction</strong><br>
+        <small style="display:block; margin-top:0.5rem; line-height:1.8;">
+          &bull; Text content (original + current)<br>
+          &bull; Style name (Normal, Heading 1, etc.)<br>
+          &bull; Font size (calculated from runs &rarr; styles &rarr; document defaults)<br>
+          &bull; Bold status, heading detection<br>
+          &bull; Word/character counts, start/end positions<br>
+          &bull; Text box content (XPath extraction &amp; merge)<br>
+          &bull; Run-level formatting (per text run: bold, italic, font, color)
+        </small>
+      </div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
+
+    <div class="flow-row">
+      <div class="flow-node orange" style="min-width:500px; text-align:left; padding:1rem 1.5rem;">
+        <strong>&#x1F504; Context Object (Shared Mutable State)</strong><br>
+        <small style="display:block; margin-top:0.5rem;">
+          <code style="font-size:0.75rem;">{ paragraphs: [{text, style, font_size, is_bold, runs, ...}], ... }</code><br>
+          Passed to each processor &mdash; processors read AND mutate this context
+        </small>
+      </div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
+
+    <div class="flow-row">
+      <div class="flow-node blue">&#x1F527; Processor 1<small>Modifies text &amp; context</small></div>
+      <span class="flow-arrow">&#x25B6;</span>
+      <div class="flow-node blue">&#x1F527; Processor 2<small>Reads updated context</small></div>
+      <span class="flow-arrow">&#x25B6;</span>
+      <div class="flow-node blue">&#x1F527; ...</small></div>
+      <span class="flow-arrow">&#x25B6;</span>
+      <div class="flow-node blue">&#x1F527; Processor N<small>Final pass</small></div>
+    </div>
+
+    <div class="flow-row"><span class="flow-arrow down">&#x25BC;</span></div>
+
+    <div class="flow-row">
+      <div class="flow-node green">&#x2705; Cleaned Text<small>Pure spoken content</small></div>
+      <span class="flow-arrow">&#x25B6;</span>
+      <div class="flow-node green">&#x1F4CA; Clean Rate<small>Confidence score 0-100</small></div>
+      <span class="flow-arrow">&#x25B6;</span>
+      <div class="flow-node green">&#x1F4DD; Removed Items<small>Audit trail</small></div>
+    </div>
+  </div>
+
+  <div class="card-grid cols-3">
+    <div class="card">
+      <h3 style="color:var(--accent);">&#x1F4E5; Input Formats</h3>
+      <ul>
+        <li style="color:var(--text)">&#x2022; <code>.doc</code> (legacy Word)</li>
+        <li style="color:var(--text)">&#x2022; <code>.docx</code> (modern Word)</li>
+        <li style="color:var(--text)">&#x2022; Google Docs (exported as .docx)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--green);">&#x1F4E4; Output Formats</h3>
+      <ul>
+        <li style="color:var(--text)">&#x2022; <code>.docx</code> with RTL + formatting</li>
+        <li style="color:var(--text)">&#x2022; <code>.txt</code> plain UTF-8</li>
+        <li style="color:var(--text)">&#x2022; JSON response with stats</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--orange);">&#x1F504; Conversion Chain</h3>
+      <ul>
+        <li style="color:var(--text)">&#x2022; Linux/Mac: LibreOffice headless</li>
+        <li style="color:var(--text)">&#x2022; Windows: pywin32 COM</li>
+        <li style="color:var(--text)">&#x2022; Auto-detection of platform</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="section-sep"></div>
+
+<!-- 5. USER JOURNEYS -->
+<section id="journeys" class="fade-in">
+  <h2><span class="num">5</span> User Journeys</h2>
+  <p class="subtitle">Four distinct workflows for different use cases</p>
+
+  <div class="journey-tabs">
+    <div class="journey-tab active" onclick="switchJourney(0)">&#x1F4C4; Single File (Rules)</div>
+    <div class="journey-tab" onclick="switchJourney(1)">&#x1F916; Single File (LLM)</div>
+    <div class="journey-tab" onclick="switchJourney(2)">&#x1F4C1; Google Drive</div>
+    <div class="journey-tab" onclick="switchJourney(3)">&#x1F4CA; Google Sheets Batch</div>
+  </div>
+
+  <!-- Journey 1: Single File Rule-Based -->
+  <div class="journey-panel active" id="journey-0">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Open Application</h4>
+          <p>User navigates to <code>http://localhost:5050</code>. The single-page app loads with tab navigation.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Configure Processors</h4>
+          <p>Select a cleaning profile (preset combination) or toggle individual processor plugins on/off. Each processor has a description and can be independently enabled.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Upload Document</h4>
+          <p>Drag & drop or browse for a <code>.doc</code> / <code>.docx</code> file. Maximum size: 16MB.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Processing</h4>
+          <p>Flask API receives file &rarr; converts if needed &rarr; parses Word XML &rarr; extracts paragraph metadata &rarr; runs each processor in sequence &rarr; calculates clean rate score.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h4>Review Results</h4>
+          <p>View original vs cleaned text side-by-side, diff view highlighting removals, statistics (word count, removal count), clean rate confidence score, and audit trail of what was removed and why.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <h4>Download</h4>
+          <p>Download cleaned document as <code>.docx</code> (with RTL formatting preserved) or <code>.txt</code> (plain UTF-8).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Journey 2: LLM Mode -->
+  <div class="journey-panel" id="journey-1">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Enable LLM Mode</h4>
+          <p>Toggle the "LLM Mode" switch in the UI. A new configuration panel appears.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Configure Provider</h4>
+          <p>Select an LLM provider: <strong>OpenAI</strong>, <strong>Anthropic</strong>, <strong>Google Gemini</strong>, <strong>Groq</strong>, <strong>OpenRouter</strong>, or <strong>Ollama</strong> (local). Enter API key (not needed for Ollama). Select model from the provider's available models.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Customize Prompt (Optional)</h4>
+          <p>Edit the default prompt template. Uses <code>{document_text}</code> placeholder. The prompt instructs the AI to use contextual understanding, not formatting rules, to identify non-speech content.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Upload & Process</h4>
+          <p>Upload file &rarr; text extracted &rarr; sent to LLM provider API (temperature=0.1 for consistency) &rarr; AI returns cleaned text.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h4>Review Diff</h4>
+          <p>Line-by-line and word-by-word diff generated between original and AI-cleaned text. Clean rate automatically set to 100 (AI is trusted).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Journey 3: Google Drive -->
+  <div class="journey-panel" id="journey-2">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Paste Drive URL</h4>
+          <p>Navigate to the Google Drive tab and paste a Google Drive file or folder URL. The system auto-detects whether it's a single file or a folder.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Google Drive API Authentication</h4>
+          <p>Uses OAuth 2.0 credentials (<code>credentials.json</code> + <code>token.json</code>). Scopes: <code>drive.readonly</code> for downloading, <code>drive</code> for upload.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Download Documents</h4>
+          <p>If folder: recursively lists all documents. Google Docs exported as <code>.docx</code>. Native <code>.doc/.docx</code> files downloaded directly. Saved to <code>temp/</code> directory.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Batch Processing</h4>
+          <p>Each downloaded file processed through the same rule-based or LLM pipeline. Results aggregated into a JSON array response.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Journey 4: Google Sheets -->
+  <div class="journey-panel" id="journey-3">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Paste Sheet URL</h4>
+          <p>Paste a Google Sheet URL containing a "Doc Link" column with Google Drive links to source documents. Optionally provide an output folder URL for cleaned files.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Preview & Session Setup</h4>
+          <p>System reads the sheet, identifies required columns (Doc Link, Clean Rate, Cleaned Link, Status, Session ID, Processed At). Creates/finds columns as needed. Returns file list preview. Generates a unique session ID.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Sequential File Processing</h4>
+          <p>Each file processed one-by-one via the frontend. For each file:</p>
+          <ul style="margin-top:0.3rem;">
+            <li>&#x2022; Sheet row updated: Status = "Processing"</li>
+            <li>&#x2022; Document downloaded from Drive</li>
+            <li>&#x2022; Processed through cleaning pipeline</li>
+            <li>&#x2022; Cleaned <code>.txt</code> uploaded to output folder</li>
+          </ul>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Sheet Updated in Real-Time</h4>
+          <p>Each row updated upon completion: <strong>Clean Rate</strong> (0-100), <strong>Cleaned Link</strong> (Drive URL), <strong>Status</strong> ("Completed"/"Failed"), <strong>Session ID</strong>, <strong>Processed At</strong> timestamp. Already-completed rows are skipped.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-sep"></div>
+
+<!-- 6. API ENDPOINTS -->
+<section id="api" class="fade-in">
+  <h2><span class="num">6</span> API Endpoints</h2>
+  <p class="subtitle">All 16 Flask HTTP endpoints</p>
+
+  <table class="data-table">
+    <thead>
+      <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="method-badge get">GET</span></td><td><code>/</code></td><td>Serve the web UI (index.html)</td></tr>
+      <tr><td><span class="method-badge get">GET</span></td><td><code>/health</code></td><td>Health check &mdash; <code>{"status": "healthy"}</code></td></tr>
+      <tr><td><span class="method-badge get">GET</span></td><td><code>/processors</code></td><td>List all registered processor plugins</td></tr>
+      <tr><td><span class="method-badge get">GET</span></td><td><code>/profiles</code></td><td>List available cleaning profiles</td></tr>
+      <tr><td><span class="method-badge get">GET</span></td><td><code>/formats</code></td><td>List output format writers (docx, txt)</td></tr>
+      <tr><td><span class="method-badge get">GET</span></td><td><code>/llm-providers</code></td><td>List LLM providers and their models</td></tr>
+      <tr><td><span class="method-badge get">GET</span></td><td><code>/llm-prompt</code></td><td>Get default LLM prompt template</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/upload</code></td><td>Process single file (rule-based)</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-drive</code></td><td>Process Google Drive files/folders (rule-based)</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-sheet-preview</code></td><td>Preview file list from Google Sheet</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-sheet-file</code></td><td>Process single sheet file (rule-based)</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-llm</code></td><td>Process single file with LLM</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-drive-llm</code></td><td>Process Drive files with LLM</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-sheet-llm-preview</code></td><td>Preview sheet for LLM processing</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/process-sheet-llm-file</code></td><td>Process single sheet file with LLM</td></tr>
+      <tr><td><span class="method-badge post">POST</span></td><td><code>/download-cleaned</code></td><td>Generate & download cleaned document</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="section-sep"></div>
+
+<!-- 7. CLEAN RATE SCORING -->
+<section id="scoring" class="fade-in">
+  <h2><span class="num">7</span> Quality Scoring System</h2>
+  <p class="subtitle">How the clean rate confidence score works</p>
+
+  <div class="card-grid cols-2">
+    <div class="card">
+      <h3>&#x1F4CA; Penalty-Based Scoring</h3>
+      <p>Starts at <strong>100</strong>. Each removed item is evaluated against ordered rules. First matching rule applies a penalty. Final score = max(0, 100 - total penalties).</p>
+
+      <div class="score-bar-container">
+        <div class="score-row">
+          <span class="score-label" style="color:var(--green);">Excellent</span>
+          <div class="score-bar-bg">
+            <div class="score-bar excellent" style="width:100%;">90 &ndash; 100</div>
+          </div>
+        </div>
+        <div class="score-row">
+          <span class="score-label" style="color:#60a5fa;">Good</span>
+          <div class="score-bar-bg">
+            <div class="score-bar good" style="width:89%;">75 &ndash; 89</div>
+          </div>
+        </div>
+        <div class="score-row">
+          <span class="score-label" style="color:var(--yellow);">Moderate</span>
+          <div class="score-bar-bg">
+            <div class="score-bar moderate" style="width:74%;">50 &ndash; 74</div>
+          </div>
+        </div>
+        <div class="score-row">
+          <span class="score-label" style="color:var(--red);">Low / Poor</span>
+          <div class="score-bar-bg">
+            <div class="score-bar low" style="width:49%;">0 &ndash; 49</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>&#x2696;&#xFE0F; Penalty Rules (by confidence)</h3>
+      <table style="width:100%; font-size:0.82rem; margin-top:0.5rem;">
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:0.4rem 0; color:var(--green); font-weight:600;">Zero (0)</td>
+          <td style="padding:0.4rem 0;">Special chars, whitespace, seif markers, force-removed patterns</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:0.4rem 0; color:var(--accent); font-weight:600;">Low (1-3)</td>
+          <td style="padding:0.4rem 0;">Citations, heading styles with multiple indicators, stage directions</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:0.4rem 0; color:var(--orange); font-weight:600;">Medium (4-6)</td>
+          <td style="padding:0.4rem 0;">Unknown parenthetical content, unknown editorial Hebrew</td>
+        </tr>
+        <tr>
+          <td style="padding:0.4rem 0; color:var(--red); font-weight:600;">High (8)</td>
+          <td style="padding:0.4rem 0;">Full bracketed paragraphs (may be spoken content)</td>
+        </tr>
+      </table>
+      <p style="margin-top:0.8rem; font-size:0.82rem;">The score acts as a <strong>quality assurance metric</strong> &mdash; low scores flag documents where automated cleaning may have incorrectly removed spoken content, prompting manual review.</p>
+    </div>
+  </div>
+</section>
+
+<div class="section-sep"></div>
+
+<!-- 8. TECH STACK -->
+<section id="tech" class="fade-in">
+  <h2><span class="num">8</span> Technology Stack</h2>
+  <p class="subtitle">All technologies, libraries, and infrastructure</p>
+
+  <div class="card-grid cols-2">
+    <div class="card">
+      <div class="tech-group">
+        <h3>&#x2699;&#xFE0F; Backend</h3>
+        <div class="tech-pills">
+          <span class="tech-pill" style="border-color:var(--accent);">Python 3.11</span>
+          <span class="tech-pill" style="border-color:var(--green);">Flask 3.0</span>
+          <span class="tech-pill" style="border-color:var(--orange);">python-docx 1.1</span>
+          <span class="tech-pill" style="border-color:var(--pink);">lxml</span>
+          <span class="tech-pill" style="border-color:var(--accent2);">Gunicorn</span>
+          <span class="tech-pill" style="border-color:var(--teal);">python-dotenv</span>
+        </div>
+      </div>
+      <div class="tech-group">
+        <h3>&#x1F916; LLM Providers</h3>
+        <div class="tech-pills">
+          <span class="tech-pill" style="border-color:var(--green);">OpenAI</span>
+          <span class="tech-pill" style="border-color:var(--orange);">Anthropic</span>
+          <span class="tech-pill" style="border-color:var(--accent);">Google Gemini</span>
+          <span class="tech-pill" style="border-color:var(--yellow);">Groq</span>
+          <span class="tech-pill" style="border-color:var(--pink);">OpenRouter</span>
+          <span class="tech-pill" style="border-color:var(--teal);">Ollama (local)</span>
+        </div>
+      </div>
+      <div class="tech-group">
+        <h3>&#x1F4E1; Google APIs</h3>
+        <div class="tech-pills">
+          <span class="tech-pill" style="border-color:var(--accent);">Drive API v3</span>
+          <span class="tech-pill" style="border-color:var(--green);">Sheets API v4</span>
+          <span class="tech-pill" style="border-color:var(--orange);">OAuth 2.0</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tech-group">
+        <h3>&#x1F3A8; Frontend</h3>
+        <div class="tech-pills">
+          <span class="tech-pill" style="border-color:var(--accent);">Tailwind CSS (CDN)</span>
+          <span class="tech-pill" style="border-color:var(--green);">Vanilla JavaScript</span>
+          <span class="tech-pill" style="border-color:var(--orange);">Tippy.js</span>
+          <span class="tech-pill" style="border-color:var(--pink);">Single HTML File</span>
+        </div>
+      </div>
+      <div class="tech-group">
+        <h3>&#x1F6E0;&#xFE0F; Infrastructure</h3>
+        <div class="tech-pills">
+          <span class="tech-pill" style="border-color:var(--accent);">Docker</span>
+          <span class="tech-pill" style="border-color:var(--accent2);">LibreOffice</span>
+          <span class="tech-pill" style="border-color:var(--green);">Heroku</span>
+          <span class="tech-pill" style="border-color:var(--orange);">Google Cloud Run</span>
+        </div>
+      </div>
+      <div class="tech-group">
+        <h3>&#x1F50D; Key Patterns</h3>
+        <div class="tech-pills">
+          <span class="tech-pill" style="border-color:var(--yellow);">Plugin Architecture</span>
+          <span class="tech-pill" style="border-color:var(--teal);">Decorator Registry</span>
+          <span class="tech-pill" style="border-color:var(--pink);">RTL-First Design</span>
+          <span class="tech-pill" style="border-color:var(--accent2);">Shared Mutable Context</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-sep"></div>
+
+<!-- 9. FILE STRUCTURE -->
+<section id="files" class="fade-in">
+  <h2><span class="num">9</span> Project File Structure</h2>
+  <p class="subtitle">Complete directory tree with file descriptions</p>
+
+  <div class="file-tree">
+<span class="dir">yiddish-audio-alignment/</span>
+<span class="file">  &#x251C;&#x2500; .env.example</span>          <span class="desc"># Environment variable template</span>
+<span class="file">  &#x251C;&#x2500; .gitignore</span>            <span class="desc"># Ignores venvs, uploads/, temp/, credentials</span>
+<span class="file">  &#x251C;&#x2500; Dockerfile</span>            <span class="desc"># Python 3.11-slim + LibreOffice</span>
+<span class="file">  &#x251C;&#x2500; README.md</span>             <span class="desc"># Setup, usage, plugin docs, deployment</span>
+<span class="file">  &#x251C;&#x2500; requirements.txt</span>      <span class="desc"># Python dependencies</span>
+<span class="file">  &#x251C;&#x2500;</span>
+<span class="highlight">  &#x251C;&#x2500; app.py</span>                <span class="desc"># Flask server &mdash; 16 HTTP endpoints (937 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; cleaner.py</span>            <span class="desc"># Cleaning orchestration, profiles, processor chains (318 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; clean_rate.py</span>         <span class="desc"># Confidence scoring system (520 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; converter.py</span>          <span class="desc"># .doc to .docx conversion (243 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; diff_utils.py</span>         <span class="desc"># Line &amp; word-level diff generation (306 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; document_model.py</span>     <span class="desc"># Data model: Document, Paragraph, TextRun (171 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; document_processor.py</span> <span class="desc"># Word parsing, text extraction, metadata (496 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; drive_downloader.py</span>   <span class="desc"># Google Drive API integration (349 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; llm_processor.py</span>      <span class="desc"># Multi-provider LLM processing (449 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; registry.py</span>           <span class="desc"># Plugin registry decorators (137 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; sheet_processor.py</span>    <span class="desc"># Google Sheets batch processing (741 lines)</span>
+<span class="highlight">  &#x251C;&#x2500; utils.py</span>              <span class="desc"># Hebrew gematria validation + XML sanitization (91 lines)</span>
+<span class="file">  &#x251C;&#x2500;</span>
+<span class="dir">  &#x251C;&#x2500; processors/</span>           <span class="desc"># Cleaning plugin directory</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; __init__.py</span>       <span class="desc"># Auto-imports all processors</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; base.py</span>           <span class="desc"># BaseProcessor ABC</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; special_chars.py</span>  <span class="desc"># Remove invisible Unicode</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; whitespace.py</span>     <span class="desc"># Normalize spacing</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; seif_marker.py</span>    <span class="desc"># Remove Hebrew section numbers</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; title_style.py</span>    <span class="desc"># Remove headings (multi-signal)</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; brackets_inline.py</span><span class="desc"># Remove inline [notes]</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; parentheses_notes.py</span> <span class="desc"># Remove (notes) &mdash; OFF by default</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; editorial_hebrew.py</span>  <span class="desc"># Remove editorial Hebrew (35+ patterns)</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; force_remove.py</span>   <span class="desc"># Force-remove blocked patterns</span>
+<span class="file">  &#x2502;   &#x2514;&#x2500; regex_processor.py</span><span class="desc"># Generic regex removal</span>
+<span class="file">  &#x251C;&#x2500;</span>
+<span class="dir">  &#x251C;&#x2500; writers/</span>              <span class="desc"># Output writer plugin directory</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; __init__.py</span>       <span class="desc"># Auto-imports all writers</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; base.py</span>           <span class="desc"># OutputWriter ABC</span>
+<span class="file">  &#x2502;   &#x251C;&#x2500; docx_writer.py</span>    <span class="desc"># .docx output with RTL + formatting</span>
+<span class="file">  &#x2502;   &#x2514;&#x2500; txt_writer.py</span>     <span class="desc"># Plain UTF-8 text output</span>
+<span class="file">  &#x251C;&#x2500;</span>
+<span class="dir">  &#x2514;&#x2500; templates/</span>
+<span class="file">      &#x2514;&#x2500; index.html</span>        <span class="desc"># Single-page web UI (~2700 lines)</span>
+  </div>
+</section>
+
+<div class="section-sep"></div>
+
+<!-- 10. DESIGN DECISIONS -->
+<section class="fade-in" style="padding-bottom:4rem;">
+  <h2><span class="num">10</span> Notable Design Decisions</h2>
+  <p class="subtitle">Key architectural choices and their rationale</p>
+
+  <div class="card-grid cols-2">
+    <div class="card" style="border-left:3px solid var(--accent);">
+      <h3>&#x1F9E9; Plugin Architecture</h3>
+      <p>Decorator-based registry (<code>@ProcessorRegistry.register</code>) allows adding new processors by simply creating a file. Zero configuration needed &mdash; import side effects trigger registration.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--green);">
+      <h3>&#x1F504; Dual Processing Paradigm</h3>
+      <p>Rule-based processing is predictable and auditable. LLM processing handles ambiguous cases. Users choose based on their needs &mdash; accuracy vs. determinism.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--orange);">
+      <h3>&#x1F4CB; Shared Mutable Context</h3>
+      <p>Processors share a context dict containing paragraph metadata. Each processor can read and mutate it, creating a chain where later processors benefit from earlier modifications.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--pink);">
+      <h3>&#x2B05;&#xFE0F; RTL-First Design</h3>
+      <p>Document model defaults to right-to-left alignment and RTL text direction. DOCX writer configures all output with RTL formatting, matching Hebrew/Yiddish text direction.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--accent2);">
+      <h3>&#x1F4CA; Quality Assurance Scoring</h3>
+      <p>The clean rate acts as a built-in confidence metric, flagging documents where automated cleaning may have incorrectly removed spoken content. Essential for the ambiguous Yiddish transcript domain.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--yellow);">
+      <h3>&#x1F4C4; Single-File Frontend</h3>
+      <p>The entire UI is one ~2700-line HTML file with Tailwind CSS and vanilla JS. No build step, no framework, no bundler &mdash; maximum simplicity for deployment and modification.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--teal);">
+      <h3>&#x1F522; Hebrew Gematria Validation</h3>
+      <p>Seif marker detection validates Hebrew numeral sequences by checking that letter values are non-increasing (e.g., <span dir="rtl">&#x05E7;&#x05DB;</span> = 100, 20 is valid). Prevents false positives from regular Hebrew text.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--red);">
+      <h3>&#x1F50D; Text Box Merging</h3>
+      <p>Word "text boxes" (used for drop caps, special formatting) are extracted via XPath on the Word XML and merged into adjacent paragraphs, ensuring no spoken content is lost.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Journey tab switching
+  function switchJourney(idx) {
+    document.querySelectorAll('.journey-tab').forEach((t, i) => {
+      t.classList.toggle('active', i === idx);
+    });
+    document.querySelectorAll('.journey-panel').forEach((p, i) => {
+      p.classList.toggle('active', i === idx);
+    });
+  }
+
+  // Nav active tracking
+  const sections = document.querySelectorAll('section[id], .hero');
+  const navLinks = document.querySelectorAll('nav a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (s.id && window.scrollY >= s.offsetTop - 120) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+
+  // Fade-in on scroll
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
