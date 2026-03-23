@@ -45,7 +45,9 @@ def download_audio(url: str) -> str:
     """Download audio from URL to temp file."""
     suffix = Path(url.split("?")[0]).suffix or ".mp3"
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    urllib.request.urlretrieve(url, tmp.name)
+    req = urllib.request.Request(url, headers={"User-Agent": "YiddishAligner/1.0"})
+    with urllib.request.urlopen(req) as response, open(tmp.name, "wb") as out:
+        out.write(response.read())
     return tmp.name
 
 
