@@ -10,6 +10,7 @@ import dataclasses
 import json
 import logging
 import os
+import subprocess
 import tempfile
 import time
 import urllib.request
@@ -49,6 +50,30 @@ def download_audio(url: str) -> str:
     with urllib.request.urlopen(req) as response, open(tmp.name, "wb") as out:
         out.write(response.read())
     return tmp.name
+
+
+def trim_audio(src_path: str, trim_start, trim_end) -> str:
+    """Pre-trim audio with ffmpeg before alignment.
+
+    stable_whisper.align() / .transcribe() have no trim_end support — they
+    run against the full file. We emit a new temp file covering only the
+    requested window and let the model treat it as a fresh clip. Timestamps
+    come back relative to 0; callers add trim_start back for absolute time.
+    """
+    suffix = Path(src_path).suffix or ".mp3"
+    out = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    out.close()
+    cmd = ["ffmpeg", "-loglevel", "error", "-nostdin", "-y", "-i", src_path]
+    if trim_start and float(trim_start) > 0:
+        cmd.extend(["-ss", str(float(trim_start))])
+    if trim_end and float(trim_end) > 0:
+        cmd.extend(["-to", str(float(trim_end))])
+    # Re-encode (libmp3lame q=4) — -c copy can leave header junk at cut points.
+    cmd.extend(["-c:a", "libmp3lame", "-q:a", "4", out.name])
+    logger.info(f"Pre-trim ffmpeg: ss={trim_start or 0} to={trim_end or 'end'}")
+    subprocess.run(cmd, check=True, capture_output=True)
+    os.unlink(src_path)
+    return out.name
 
 
 def handler(job):
@@ -96,6 +121,11 @@ def handler(job):
             audio_path = tmp.name
         else:
             return {"error": "Provide 'audio_url' or 'audio_base64'"}
+
+        trim_start = input_data.get("trim_start")
+        trim_end = input_data.get("trim_end")
+        if (trim_start and float(trim_start) > 0) or (trim_end and float(trim_end) > 0):
+            audio_path = trim_audio(audio_path, trim_start, trim_end)
 
         model = get_model()
 
