@@ -21,24 +21,36 @@ import stable_whisper
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Model name baked into the Docker image
-MODEL_NAME = "ivrit-ai/yi-whisper-large-v3-turbo-ct2"
+# Default model when the request doesn't specify one. Reads MODEL_NAME from
+# the endpoint's env vars so the active model can be swapped without rebuilding
+# the image (set via RunPod GraphQL when an admin "Promotes" a TrainingRun).
+DEFAULT_MODEL_NAME = os.environ.get(
+    "MODEL_NAME", "ivrit-ai/yi-whisper-large-v3-turbo-ct2"
+)
 
-# Global model — loaded once, reused across requests
-_model = None
+# Single-slot model cache — loaded once per name, swapped when a request asks
+# for a different one. Mirrors ivrit-ai's transcribe_core() pattern (see
+# reference/ivrit_infer_runpod.py): we don't need a multi-model LRU because
+# any given worker rarely sees more than one model in use at a time, and the
+# memory footprint of two large CT2 models is too large to keep both resident.
+_current_model_name: str | None = None
+_current_model = None
 
 
-def get_model():
-    """Load model once at first request, reuse thereafter."""
-    global _model
-    if _model is None:
-        logger.info(f"Loading model: {MODEL_NAME}")
-        start = time.time()
-        _model = stable_whisper.load_faster_whisper(
-            MODEL_NAME, device="cuda", compute_type="int8"
-        )
-        logger.info(f"Model loaded in {time.time() - start:.1f}s")
-    return _model
+def get_model(model_name: str):
+    """Return a loaded model for `model_name`, swapping if a different one is requested."""
+    global _current_model, _current_model_name
+    if _current_model_name == model_name and _current_model is not None:
+        return _current_model
+
+    logger.info(f"Loading model: {model_name}")
+    start = time.time()
+    _current_model = stable_whisper.load_faster_whisper(
+        model_name, device="cuda", compute_type="int8"
+    )
+    _current_model_name = model_name
+    logger.info(f"Model loaded in {time.time() - start:.1f}s")
+    return _current_model
 
 
 def download_audio(url: str) -> str:
@@ -61,7 +73,9 @@ def handler(job):
         "audio_base64": "...",               # OR base64-encoded audio
         "text": "transcript text...",         # Required for "align" mode
         "language": "yi",                    # Default: "yi" (Yiddish)
-        "word_timestamps": true              # Default: true
+        "word_timestamps": true,             # Default: true
+        "model_name": "user/yi-v3-ct2"       # Optional: HF repo to load.
+                                             # Falls back to MODEL_NAME env var.
     }
 
     Output:
@@ -81,6 +95,10 @@ def handler(job):
     mode = input_data.get("mode", "transcribe")
     language = input_data.get("language", "yi")
     word_timestamps = input_data.get("word_timestamps", True)
+    # Per-request model override (Yiddish Cleaner sends this when an admin
+    # picks a published TrainingRun in the transcribe UI). Falls back to the
+    # endpoint's MODEL_NAME env var when the caller doesn't specify one.
+    model_name = input_data.get("model_name") or DEFAULT_MODEL_NAME
 
     # Get audio
     audio_path = None
@@ -97,7 +115,7 @@ def handler(job):
         else:
             return {"error": "Provide 'audio_url' or 'audio_base64'"}
 
-        model = get_model()
+        model = get_model(model_name)
 
         if mode == "align":
             text = input_data.get("text")
@@ -121,7 +139,7 @@ def handler(job):
                 regroup=True,
             )
 
-        return format_result(result, mode, language)
+        return format_result(result, mode, language, model_name)
 
     except Exception as e:
         logger.error(f"Error: {e}", exc_info=True)
@@ -131,7 +149,7 @@ def handler(job):
             os.unlink(audio_path)
 
 
-def format_result(result, mode, language):
+def format_result(result, mode, language, model_name):
     """Convert stable_whisper result to standardized output format."""
     segments = []
     timestamps = []
@@ -175,7 +193,7 @@ def format_result(result, mode, language):
         "full_text": result.text.strip() if hasattr(result, "text") else "",
         "segments": segments,
         "timestamps": timestamps,
-        "model": MODEL_NAME,
+        "model": model_name,
         "language": language,
         "mode": mode,
     }
